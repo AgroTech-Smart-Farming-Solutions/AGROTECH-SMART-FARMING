@@ -29,6 +29,7 @@ const Profile: React.FC = () => {
   const [newPostCaption, setNewPostCaption] = useState('');
   const [newPostImage, setNewPostImage] = useState<File | null>(null);
   const [newPostPreview, setNewPostPreview] = useState<string | null>(null);
+  const [newPostMediaType, setNewPostMediaType] = useState<'image' | 'video'>('image');
   const [postingNew, setPostingNew] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const postImageRef = useRef<HTMLInputElement>(null);
@@ -83,9 +84,8 @@ const Profile: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     setNewPostImage(file);
-    const reader = new FileReader();
-    reader.onload = (ev) => setNewPostPreview(ev.target?.result as string);
-    reader.readAsDataURL(file);
+    setNewPostPreview(URL.createObjectURL(file));
+    setNewPostMediaType(file.type.startsWith('video') ? 'video' : 'image');
   };
 
   const createPost = async () => {
@@ -101,7 +101,7 @@ const Profile: React.FC = () => {
         imageUrl = data.publicUrl;
       }
     }
-    await supabase.from('posts').insert({ user_id: user.id, caption: newPostCaption || null, image_url: imageUrl });
+    await supabase.from('posts').insert({ user_id: user.id, caption: newPostCaption || null, image_url: imageUrl, media_type: newPostMediaType });
     setNewPostCaption('');
     setNewPostImage(null);
     setNewPostPreview(null);
@@ -120,7 +120,7 @@ const Profile: React.FC = () => {
     <AppLayout>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-        <input ref={postImageRef} type="file" accept="image/*" onChange={handleNewPostImage} className="hidden" />
+        <input ref={postImageRef} type="file" accept="image/*,video/*" onChange={handleNewPostImage} className="hidden" />
 
         {/* Profile Header */}
         <ClayCard className="relative overflow-hidden">
@@ -202,7 +202,11 @@ const Profile: React.FC = () => {
                   <button onClick={() => { setShowNewPost(false); setNewPostPreview(null); setNewPostImage(null); }}><X size={18} className="text-muted-foreground" /></button>
                 </div>
                 {newPostPreview && (
-                  <img src={newPostPreview} alt="Preview" className="w-full aspect-square object-cover rounded-xl mb-3" />
+                  newPostMediaType === 'video' ? (
+                    <video src={newPostPreview} controls className="w-full aspect-square object-cover rounded-xl mb-3" />
+                  ) : (
+                    <img src={newPostPreview} alt="Preview" className="w-full aspect-square object-cover rounded-xl mb-3" />
+                  )
                 )}
                 <Textarea placeholder={t('addCaption')} value={newPostCaption} onChange={(e) => setNewPostCaption(e.target.value)} className="clay-inset border-0 mb-3" rows={2} />
                 <div className="flex gap-2">
@@ -252,7 +256,9 @@ const Profile: React.FC = () => {
                   {posts.map((post, index) => (
                     <motion.div key={post.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }}
                       whileHover={{ scale: 1.02 }} className="relative aspect-square rounded-xl sm:rounded-2xl overflow-hidden cursor-pointer group">
-                      {post.image_url ? (
+                      {(post as any).media_type === 'video' && post.image_url ? (
+                        <video src={post.image_url} autoPlay loop muted playsInline className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                      ) : post.image_url ? (
                         <img src={post.image_url} alt={post.caption || 'Post'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
                       ) : (
                         <div className="w-full h-full bg-primary/5 flex items-center justify-center p-2">
@@ -284,7 +290,11 @@ const Profile: React.FC = () => {
                   {savedPosts.map((saved: any, index: number) => (
                     <motion.div key={saved.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }}
                       className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group">
-                      {saved.posts?.image_url && <img src={saved.posts.image_url} alt="" className="w-full h-full object-cover" />}
+                      {saved.posts?.media_type === 'video' && saved.posts?.image_url ? (
+                          <video src={saved.posts.image_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                      ) : saved.posts?.image_url && (
+                          <img src={saved.posts.image_url} alt="" className="w-full h-full object-cover" />
+                      )}
                     </motion.div>
                   ))}
                 </div>

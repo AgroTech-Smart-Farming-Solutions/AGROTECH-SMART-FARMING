@@ -4,13 +4,9 @@ import { Bell, Languages, X, Check, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import logoImg from '@/assets/logo.png';
-
-const notifications = [
-  { id: 1, title: 'Rain Alert', message: 'Heavy rain expected tomorrow', time: '2h ago', type: 'weather' },
-  { id: 2, title: 'Price Update', message: 'Wheat prices increased by 5%', time: '5h ago', type: 'price' },
-  { id: 3, title: 'Scheme Alert', message: 'New subsidy scheme available', time: '1d ago', type: 'scheme' },
-];
 
 export const Header: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
@@ -18,6 +14,66 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    if (!profile) return;
+    
+    const fetchUnread = async () => {
+      const { data: convs } = await supabase.from('conversation_participants').select('conversation_id').eq('user_id', profile.user_id);
+      if (!convs || convs.length === 0) return;
+      const convIds = convs.map(c => c.conversation_id);
+      
+      const { data: msgs } = await supabase
+        .from('messages')
+        .select('*')
+        .in('conversation_id', convIds)
+        .neq('sender_id', profile.user_id)
+        .is('read_at', null)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (msgs) {
+        const fullNotifs = await Promise.all(msgs.map(async (m) => {
+          const { data: sender } = await supabase.from('profiles').select('name').eq('user_id', m.sender_id).maybeSingle();
+          return {
+            id: m.id,
+            convId: m.conversation_id,
+            title: `Message from ${sender?.name || 'User'}`,
+            message: m.content,
+            time: new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: 'message'
+          };
+        }));
+        setNotifications(fullNotifs);
+      }
+    };
+
+    fetchUnread();
+
+    const channel = supabase.channel('header_notifs')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
+        if (payload.new.sender_id !== profile.user_id) {
+            const { data: isParticipant } = await supabase.from('conversation_participants').select('id').eq('conversation_id', payload.new.conversation_id).eq('user_id', profile.user_id).maybeSingle();
+            if (isParticipant) {
+              const { data: sender } = await supabase.from('profiles').select('name').eq('user_id', payload.new.sender_id).maybeSingle();
+              const newNotif = {
+                id: payload.new.id,
+                convId: payload.new.conversation_id,
+                title: `Message from ${sender?.name || 'User'}`,
+                message: payload.new.content,
+                time: new Date(payload.new.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                type: 'message'
+              };
+              setNotifications(prev => [newNotif, ...prev]);
+              toast.info(`New message from ${sender?.name || 'User'}`);
+            }
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [profile]);
 
   const languages = [
     { code: 'en' as const, label: 'English', native: 'EN' },
@@ -103,18 +159,23 @@ export const Header: React.FC = () => {
                 <button onClick={() => setShowNotifications(false)} className="p-1 rounded-lg hover:bg-muted transition-colors"><X size={16} /></button>
               </div>
               <div className="space-y-2 max-h-[300px] overflow-y-auto scrollbar-hide">
-                {notifications.map((notif, index) => (
-                  <motion.div key={notif.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}
-                    className="clay-inset p-3 rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold">{notif.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{notif.message}</p>
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">{t('noNotifications') || 'No new notifications'}</p>
+                ) : (
+                  notifications.map((notif, index) => (
+                    <motion.div key={notif.id} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * 0.05 }}
+                      onClick={() => { setShowNotifications(false); if (notif.convId) navigate(`/messages?chat=${notif.convId}`); }}
+                      className="clay-inset p-3 rounded-xl cursor-pointer hover:bg-muted/50 transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold">{notif.title}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{notif.message}</p>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">{notif.time}</span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">{notif.time}</span>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))
+                )}
               </div>
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full mt-3 py-2 text-xs font-semibold text-primary text-center rounded-xl hover:bg-primary/5 transition-colors">
                 {t('viewAllNotifications')}

@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
-import { Calendar, AlertTriangle, BookOpen, FileText, Plus, Trash2 } from 'lucide-react';
+import { Calendar, AlertTriangle, BookOpen, FileText, Plus, Trash2, Loader2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ClayCard, ClayButton } from '@/components/ui/ClayCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 // Mock Data
 const cropCalendarData = {
@@ -31,12 +34,6 @@ const cropCalendarData = {
     ],
   },
 };
-
-const weatherAlerts = [
-  { type: 'rain', message: 'Heavy rain expected tomorrow. Hold irrigation.', severity: 'warning', date: 'Tomorrow' },
-  { type: 'heat', message: 'Heat wave alert for next 3 days. Increase watering.', severity: 'danger', date: 'Feb 8-10' },
-  { type: 'frost', message: 'Light frost possible. Cover tender plants.', severity: 'info', date: 'Feb 12' },
-];
 
 const govtSchemes = [
   { 
@@ -74,19 +71,26 @@ interface LedgerEntry {
   date: string;
 }
 
+interface WeatherAlert {
+  type: string;
+  message: string;
+  severity: 'info' | 'warning' | 'danger';
+  date: string;
+}
+
 const SmartTools: React.FC = () => {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'calendar';
 
   const [selectedCrop, setSelectedCrop] = useState<'wheat' | 'tomato'>('wheat');
-  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([
-    { id: '1', name: 'Wheat Seeds', category: 'Seeds', amount: 2500, type: 'expense', date: '2024-02-01' },
-    { id: '2', name: 'DAP Fertilizer', category: 'Fertilizer', amount: 1800, type: 'expense', date: '2024-02-03' },
-    { id: '3', name: 'Labor - Sowing', category: 'Labor', amount: 3000, type: 'expense', date: '2024-02-05' },
-    { id: '4', name: 'Tomato Sale', category: 'Sale', amount: 15000, type: 'income', date: '2024-02-10' },
-  ]);
+  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
   const [newEntry, setNewEntry] = useState<{ name: string; category: string; amount: string; type: 'expense' | 'income' }>({ name: '', category: 'Seeds', amount: '', type: 'expense' });
+  const [isLoadingLedger, setIsLoadingLedger] = useState(true);
+
+  const [weatherAlerts, setWeatherAlerts] = useState<WeatherAlert[]>([]);
+  const [isLoadingWeather, setIsLoadingWeather] = useState(true);
 
   const tabs = [
     { id: 'calendar', label: t('cropCalendar'), icon: Calendar },
@@ -95,27 +99,158 @@ const SmartTools: React.FC = () => {
     { id: 'schemes', label: t('schemes'), icon: FileText },
   ];
 
-  const addLedgerEntry = () => {
+  // Fetch Weather
+  useEffect(() => {
+    const fetchWeather = async () => {
+      setIsLoadingWeather(true);
+      
+      const getWeather = async (lat: number, lon: number) => {
+        try {
+          const API_KEY = '34bcd684fb54306142476353e9f3d6b0';
+          const response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`);
+          const data = await response.json();
+          
+          if (!data.list) throw new Error("Invalid format");
+          
+          const alerts: WeatherAlert[] = [];
+          let heavyRain = false, heatWave = false, frost = false;
+          
+          data.list.slice(0, 24).forEach((item: any) => {
+             const temp = item.main.temp_max;
+             const rain = item.rain ? item.rain['3h'] || 0 : 0;
+             const dateStr = new Date(item.dt * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+             
+             if (rain > 10 && !heavyRain) {
+               heavyRain = true;
+               alerts.push({ type: 'rain', message: `Heavy rain expected. Hold irrigation.`, severity: 'warning', date: dateStr });
+             } 
+             if (temp > 40 && !heatWave) {
+               heatWave = true;
+               alerts.push({ type: 'heat', message: `Heat wave alert (${temp}°C). Increase watering.`, severity: 'danger', date: dateStr });
+             } 
+             if (temp < 5 && !frost) {
+               frost = true;
+               alerts.push({ type: 'frost', message: `Frost possible (${temp}°C). Cover tender plants.`, severity: 'info', date: dateStr });
+             }
+          });
+          
+          if (alerts.length === 0) {
+            alerts.push({ type: 'clear', message: `Current temp is ${data.list[0].main.temp}°C in ${data.city.name}. Favorable conditions expected.`, severity: 'info', date: 'Next 3 days' });
+          }
+          
+          setWeatherAlerts(alerts);
+        } catch (err) {
+          console.error('Error fetching weather:', err);
+          setWeatherAlerts([{ type: 'error', message: 'Could not load weather data.', severity: 'warning', date: 'Today' }]);
+        } finally {
+          setIsLoadingWeather(false);
+        }
+      };
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => getWeather(position.coords.latitude, position.coords.longitude),
+          (error) => {
+            console.error("Geolocation error:", error);
+            toast.error("Location permission denied. Using default location.");
+            getWeather(21.1458, 79.0882); // Default to Nagpur
+          }
+        );
+      } else {
+        toast.error("Geolocation not supported. Using default location.");
+        getWeather(21.1458, 79.0882);
+      }
+    };
+    
+    if (activeTab === 'alerts') {
+      fetchWeather();
+    }
+  }, [activeTab]);
+
+  // Fetch Ledger
+  useEffect(() => {
+    const fetchLedger = async () => {
+      if (!user) {
+        setIsLoadingLedger(false);
+        return;
+      }
+      try {
+        setIsLoadingLedger(true);
+        const { data, error } = await supabase
+          .from('ledger_entries')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('date', { ascending: false });
+          
+        if (error) throw error;
+        setLedgerEntries(data || []);
+      } catch (err) {
+        console.error('Error fetching ledger:', err);
+        toast.error('Failed to load ledger entries');
+      } finally {
+        setIsLoadingLedger(false);
+      }
+    };
+    
+    if (activeTab === 'ledger') {
+      fetchLedger();
+    }
+  }, [user, activeTab]);
+
+  const addLedgerEntry = async () => {
+    if (!user) {
+      toast.error('Please login to add entries');
+      return;
+    }
+    
     if (newEntry.name && newEntry.amount) {
-      const entry: LedgerEntry = {
-        id: Date.now().toString(),
+      const entryData = {
+        user_id: user.id,
         name: newEntry.name,
         category: newEntry.category,
         amount: parseFloat(newEntry.amount),
         type: newEntry.type,
         date: new Date().toISOString().split('T')[0],
       };
-      setLedgerEntries([...ledgerEntries, entry]);
-      setNewEntry({ name: '', category: 'Seeds', amount: '', type: 'expense' });
+      
+      try {
+        const { data, error } = await supabase
+          .from('ledger_entries')
+          .insert([entryData])
+          .select()
+          .single();
+          
+        if (error) throw error;
+        
+        setLedgerEntries([data, ...ledgerEntries]);
+        setNewEntry({ name: '', category: 'Seeds', amount: '', type: 'expense' });
+        toast.success('Entry added successfully');
+      } catch (err) {
+        console.error('Error adding entry:', err);
+        toast.error('Failed to add ledger entry');
+      }
     }
   };
 
-  const deleteLedgerEntry = (id: string) => {
-    setLedgerEntries(ledgerEntries.filter(e => e.id !== id));
+  const deleteLedgerEntry = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('ledger_entries')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setLedgerEntries(ledgerEntries.filter(e => e.id !== id));
+      toast.success('Entry deleted');
+    } catch (err) {
+      console.error('Error deleting entry:', err);
+      toast.error('Failed to delete entry');
+    }
   };
 
-  const totalIncome = ledgerEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amount, 0);
-  const totalExpense = ledgerEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + e.amount, 0);
+  const totalIncome = ledgerEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + Number(e.amount), 0);
+  const totalExpense = ledgerEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + Number(e.amount), 0);
   const netProfit = totalIncome - totalExpense;
 
   return (
@@ -215,34 +350,40 @@ const SmartTools: React.FC = () => {
             <motion.div
               key="alerts"
               initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-4"
-            >
-              {weatherAlerts.map((alert, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <ClayCard className={`border-l-4 ${
-                    alert.severity === 'danger' ? 'border-l-destructive' :
-                    alert.severity === 'warning' ? 'border-l-accent' : 'border-l-primary'
-                  }`}>
-                    <div className="flex items-start gap-3">
-                      <AlertTriangle className={
-                        alert.severity === 'danger' ? 'text-destructive' :
-                        alert.severity === 'warning' ? 'text-accent-foreground' : 'text-primary'
-                      } size={20} />
-                      <div>
-                        <p className="font-medium">{alert.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{alert.date}</p>
+               animate={{ opacity: 1, x: 0 }}
+               exit={{ opacity: 0, x: -20 }}
+               className="space-y-4"
+             >
+              {isLoadingWeather ? (
+                <div className="flex justify-center py-8">
+                  <Loader2 className="animate-spin text-primary" size={32} />
+                </div>
+              ) : (
+                weatherAlerts.map((alert, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                  >
+                    <ClayCard className={`border-l-4 ${
+                      alert.severity === 'danger' ? 'border-l-destructive' :
+                      alert.severity === 'warning' ? 'border-l-accent' : 'border-l-primary'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className={
+                          alert.severity === 'danger' ? 'text-destructive' :
+                          alert.severity === 'warning' ? 'text-accent-foreground' : 'text-primary'
+                        } size={20} />
+                        <div>
+                          <p className="font-medium">{alert.message}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{alert.date}</p>
+                        </div>
                       </div>
-                    </div>
-                  </ClayCard>
-                </motion.div>
-              ))}
+                    </ClayCard>
+                  </motion.div>
+                ))
+              )}
             </motion.div>
           )}
 
@@ -330,7 +471,11 @@ const SmartTools: React.FC = () => {
               <ClayCard>
                 <h3 className="font-bold mb-4">Recent Entries</h3>
                 <div className="space-y-3">
-                  {ledgerEntries.length === 0 ? (
+                  {isLoadingLedger ? (
+                    <div className="flex justify-center py-4">
+                       <Loader2 className="animate-spin text-primary" size={24} />
+                    </div>
+                  ) : ledgerEntries.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-4">{t('noData')}</p>
                   ) : (
                     ledgerEntries.map((entry) => (
@@ -398,3 +543,4 @@ const SmartTools: React.FC = () => {
 };
 
 export default SmartTools;
+

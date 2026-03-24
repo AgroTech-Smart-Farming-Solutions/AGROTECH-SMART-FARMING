@@ -82,6 +82,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_entries: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          category: string
+          amount: number
+          type: "expense" | "income"
+          date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          category: string
+          amount: number
+          type: "expense" | "income"
+          date: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          category?: string
+          amount?: number
+          type?: "expense" | "income"
+          date?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       messages: {
         Row: {
           content: string
@@ -153,6 +194,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          media_type: string | null
           likes: number | null
           user_id: string
         }
@@ -162,6 +204,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          media_type?: string | null
           likes?: number | null
           user_id: string
         }
@@ -171,6 +214,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          media_type?: string | null
           likes?: number | null
           user_id?: string
         }
@@ -179,6 +223,7 @@ export type Database = {
       profiles: {
         Row: {
           ai_credits_remaining: number
+          ai_credits_date: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -199,6 +244,7 @@ export type Database = {
         }
         Insert: {
           ai_credits_remaining?: number
+          ai_credits_date?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -219,6 +265,7 @@ export type Database = {
         }
         Update: {
           ai_credits_remaining?: number
+          ai_credits_date?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string

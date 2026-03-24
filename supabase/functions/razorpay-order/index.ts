@@ -32,8 +32,8 @@ serve(async (req) => {
     const plan = plans[plan_id];
     if (!plan) throw new Error("Invalid plan");
 
-    const RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID");
-    const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET");
+    const RAZORPAY_KEY_ID = Deno.env.get("RAZORPAY_KEY_ID") || "rzp_test_RBtnShaVaVDWIZ";
+    const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET") || "GwaAHuQU32PZYypIVAIbd9H6";
     if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) throw new Error("Razorpay not configured");
 
     const orderRes = await fetch("https://api.razorpay.com/v1/orders", {

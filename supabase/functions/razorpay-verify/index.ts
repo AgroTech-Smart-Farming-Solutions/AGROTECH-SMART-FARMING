@@ -25,7 +25,7 @@ serve(async (req) => {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan_id } = await req.json();
 
     // Verify signature using HMAC SHA256
-    const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET")!;
+    const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET") || "GwaAHuQU32PZYypIVAIbd9H6";
     const body = `${razorpay_order_id}|${razorpay_payment_id}`;
     
     const key = await crypto.subtle.importKey(
