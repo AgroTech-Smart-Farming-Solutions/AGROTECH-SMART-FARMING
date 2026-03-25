@@ -147,6 +147,12 @@ export const translations: Translations = {
 
   // Prevention
   prevention: { en: 'Prevention', hi: 'रोकथाम', mr: 'प्रतिबंध', pa: 'ਰੋਕਥਾਮ', ta: 'தடுப்பு', te: 'నివారణ', bn: 'প্রতিরোধ', gu: 'નિવારણ' },
+
+  // Weather Widget Additions
+  feelsLike: { en: 'Feels like', hi: 'महसूस होता है', mr: 'जाणवते', pa: 'ਮਹਿਸੂਸ ਹੁੰਦਾ ਹੈ', ta: 'உணரப்படுகிறது', te: 'అనిపిస్తుంది', bn: 'মনে হচ্ছে', gu: 'અનુભવાય છે' },
+  wind: { en: 'Wind', hi: 'हवा', mr: 'वारा', pa: 'ਹਵਾ', ta: 'காற்று', te: 'గాలి', bn: 'বাতাস', gu: 'પવન' },
+  kmh: { en: 'km/h', hi: 'किमी/घंटा', mr: 'किमी/तास', pa: 'ਕਿ.ਮੀ./ਘੰਟਾ', ta: 'கிமீ/மணி', te: 'కి.మీ/గం', bn: 'কিমি/ঘণ্টা', gu: 'કિમી/કલાક' },
+  fiveDayForecast: { en: '5-Day Forecast', hi: '5-दिवसीय पूर्वानुमान', mr: '५-दिवसीय अंदाज', pa: '5-ਦਿਨਾਂ ਦੀ ਭਵਿੱਖਬਾਣੀ', ta: '5-நாள் முன்னறிவிப்பு', te: '5-రోజుల సూచన', bn: '৫ দিনের পূর্বাভাস', gu: '5-દિવસની આગાહી' },
 };
 
 interface LanguageContextType {

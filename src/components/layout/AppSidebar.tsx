@@ -18,6 +18,13 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
+// IMPORTANT: Import the Dropdown Menu components
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const mainNav = [
   { icon: Home, path: '/', key: 'home', label: 'Dashboard' },
@@ -43,12 +50,14 @@ export const AppSidebar: React.FC = () => {
   const collapsed = state === 'collapsed';
 
   const languages = ['en', 'hi', 'mr', 'pa', 'ta', 'te', 'bn', 'gu'] as const;
+  
+  // Keep short names for the collapsed sidebar icon
   const languageNames: Record<string, string> = { en: 'EN', hi: 'हि', mr: 'म', pa: 'ਪੰ', ta: 'த', te: 'తె', bn: 'বা', gu: 'ગુ' };
-
-  const cycleLanguage = () => {
-    const currentIndex = languages.indexOf(language as any);
-    const nextIndex = (currentIndex + 1) % languages.length;
-    setLanguage(languages[nextIndex]);
+  
+  // Add full names for the dropdown menu list
+  const fullLanguageNames: Record<string, string> = { 
+    en: 'English', hi: 'हिन्दी', mr: 'मराठी', pa: 'ਪੰਜਾਬੀ', 
+    ta: 'தமிழ்', te: 'తెలుగు', bn: 'বাংলা', gu: 'ગુજરાતી' 
   };
 
   const isActive = (path: string) => location.pathname === path;
@@ -150,13 +159,32 @@ export const AppSidebar: React.FC = () => {
       <SidebarFooter className="p-3 space-y-1">
         {/* Language + Theme */}
         <div className={`flex ${collapsed ? 'flex-col' : ''} gap-1`}>
-          <button
-            onClick={cycleLanguage}
-            className="flex items-center gap-2 px-3 py-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full"
-          >
-            <Languages size={18} className="shrink-0" />
-            {!collapsed && <span className="text-[13px] font-medium">{languageNames[language]}</span>}
-          </button>
+          
+          {/* NEW DROPDOWN MENU FOR LANGUAGES */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full outline-none">
+                <Languages size={18} className="shrink-0" />
+                {!collapsed && <span className="text-[13px] font-medium">{languageNames[language]}</span>}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent 
+              side={collapsed ? "right" : "top"} 
+              align="start" 
+              className="w-40 rounded-xl"
+            >
+              {languages.map((lang) => (
+                <DropdownMenuItem 
+                  key={lang} 
+                  onClick={() => setLanguage(lang)}
+                  className={`cursor-pointer rounded-lg ${language === lang ? 'bg-sidebar-primary/15 text-sidebar-primary font-bold' : ''}`}
+                >
+                  {fullLanguageNames[lang]}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <button
             onClick={toggleTheme}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full"

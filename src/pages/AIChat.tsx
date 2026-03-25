@@ -6,7 +6,7 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ClayCard } from '@/components/ui/ClayCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+// import { supabase } from '@/integrations/supabase/client';
 import { useCredits } from '@/hooks/useCredits';
 import { useNavigate } from 'react-router-dom';
 import aiFarmImg from '@/assets/ai-farm.jpg';
@@ -30,6 +30,8 @@ const AIChat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { checkCredits, deductCredit } = useCredits();
 
+  const recognitionRef = useRef<any>(null);
+
   useEffect(() => {
     checkCredits('ai').then(setCreditInfo);
   }, []);
@@ -37,47 +39,136 @@ const AIChat: React.FC = () => {
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => { scrollToBottom(); }, [messages]);
 
+  // const sendMessage = async () => {
+  //   if (!inputText.trim() || isLoading) return;
+
+  //   // Check credits before sending
+  //   const credits = await checkCredits('ai');
+  //   setCreditInfo(credits);
+  //   if (!credits.allowed) return;
+
+  //   const userMessage: Message = {
+  //     id: Date.now().toString(), role: 'user', content: inputText, timestamp: new Date(),
+  //   };
+  //   setMessages(prev => [...prev, userMessage]);
+  //   setInputText('');
+  //   setIsLoading(true);
+
+  //   try {
+  //     const chatHistory = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
+  //     const { data, error } = await supabase.functions.invoke('ai-chat', {
+  //       body: { messages: chatHistory, language },
+  //     });
+  //     if (error) throw error;
+
+  //     // Deduct credit after successful response
+  //     await deductCredit('ai');
+  //     const updatedCredits = await checkCredits('ai');
+  //     setCreditInfo(updatedCredits);
+
+  //     setMessages(prev => [...prev, {
+  //       id: (Date.now() + 1).toString(), role: 'assistant',
+  //       content: data.reply || 'Sorry, I could not generate a response.', timestamp: new Date(),
+  //     }]);
+  //   } catch (err) {
+  //     console.error('AI Chat error:', err);
+  //     setMessages(prev => [...prev, {
+  //       id: (Date.now() + 1).toString(), role: 'assistant',
+  //       content: '⚠️ Sorry, I encountered an error. Please try again.', timestamp: new Date(),
+  //     }]);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   const sendMessage = async () => {
-    if (!inputText.trim() || isLoading) return;
+  if (!inputText.trim() || isLoading) return;
 
-    // Check credits before sending
-    const credits = await checkCredits('ai');
-    setCreditInfo(credits);
-    if (!credits.allowed) return;
+  const credits = await checkCredits('ai');
+  setCreditInfo(credits);
+  if (!credits.allowed) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(), role: 'user', content: inputText, timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
-    setIsLoading(true);
-
-    try {
-      const chatHistory = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { messages: chatHistory, language },
-      });
-      if (error) throw error;
-
-      // Deduct credit after successful response
-      await deductCredit('ai');
-      const updatedCredits = await checkCredits('ai');
-      setCreditInfo(updatedCredits);
-
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(), role: 'assistant',
-        content: data.reply || 'Sorry, I could not generate a response.', timestamp: new Date(),
-      }]);
-    } catch (err) {
-      console.error('AI Chat error:', err);
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(), role: 'assistant',
-        content: '⚠️ Sorry, I encountered an error. Please try again.', timestamp: new Date(),
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
+  const userMessage: Message = {
+    id: Date.now().toString(), role: 'user', content: inputText, timestamp: new Date(),
   };
+  setMessages(prev => [...prev, userMessage]);
+  setInputText('');
+  setIsLoading(true);
+
+  try {
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+
+    const langMap: Record<string, string> = {
+      en: "English", hi: "Hindi", mr: "Marathi", pa: "Punjabi",
+      ta: "Tamil", te: "Telugu", bn: "Bengali", gu: "Gujarati",
+    };
+    const langName = langMap[language] || "English";
+
+    const systemPrompt = `You are "Kisan Sahayak" (किसान सहायक), an expert AI farming assistant for Indian farmers. 
+You have deep knowledge about crop cultivation, irrigation, soil health, pest and disease management, 
+Government schemes (PM-KISAN, PMFBY, KCC), market prices, organic farming, and modern techniques.
+IMPORTANT: Always respond in ${langName}. Give practical advice in simple language. 
+Keep responses concise (2-4 paragraphs). Use markdown formatting.`;
+
+    // Convert history to Gemini format
+    const chatHistory = [...messages, userMessage];
+    const geminiContents = chatHistory.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    const response = await fetch(
+      // ✅ Correct
+`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: {
+            parts: [{ text: systemPrompt }],
+          },
+          contents: geminiContents,
+          generationConfig: {
+            maxOutputTokens: 1024,
+            temperature: 0.7,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('Gemini error:', response.status, errText);
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text 
+      || 'Sorry, I could not generate a response.';
+
+    await deductCredit('ai');
+    const updatedCredits = await checkCredits('ai');
+    setCreditInfo(updatedCredits);
+
+    setMessages(prev => [...prev, {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: reply,
+      timestamp: new Date(),
+    }]);
+
+  } catch (err) {
+    console.error('AI Chat error:', err);
+    setMessages(prev => [...prev, {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: '⚠️ Sorry, I encountered an error. Please try again.',
+      timestamp: new Date(),
+    }]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const speakMessage = (text: string) => {
     if ('speechSynthesis' in window) {
@@ -90,19 +181,70 @@ const AIChat: React.FC = () => {
     }
   };
 
+  // const toggleListening = () => {
+  //   if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
+  //   if (isListening) { setIsListening(false); return; }
+  //   setIsListening(true);
+  //   const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+  //   const recognition = new SpeechRecognition();
+  //   recognition.lang = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : language === 'pa' ? 'pa-IN' : 'en-US';
+  //   recognition.continuous = false;
+  //   recognition.onresult = (event: any) => { setInputText(event.results[0][0].transcript); setIsListening(false); };
+  //   recognition.onerror = () => setIsListening(false);
+  //   recognition.onend = () => setIsListening(false);
+  //   recognition.start();
+  // };
+
   const toggleListening = () => {
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
-    if (isListening) { setIsListening(false); return; }
-    setIsListening(true);
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = language === 'hi' ? 'hi-IN' : language === 'mr' ? 'mr-IN' : language === 'pa' ? 'pa-IN' : 'en-US';
-    recognition.continuous = false;
-    recognition.onresult = (event: any) => { setInputText(event.results[0][0].transcript); setIsListening(false); };
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-    recognition.start();
+  const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+  
+  if (!SpeechRecognition) {
+    alert('Speech recognition is not supported in your browser. Please use Chrome.');
+    return;
+  }
+
+  if (isListening) {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognitionRef.current = recognition;
+
+  recognition.lang = 
+    language === 'hi' ? 'hi-IN' : 
+    language === 'mr' ? 'mr-IN' : 
+    language === 'pa' ? 'pa-IN' : 
+    language === 'ta' ? 'ta-IN' :
+    language === 'te' ? 'te-IN' :
+    language === 'bn' ? 'bn-IN' :
+    language === 'gu' ? 'gu-IN' : 'en-US';
+
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => setIsListening(true);
+
+  recognition.onresult = (event: any) => {
+    const transcript = event.results[0][0].transcript;
+    console.log('Transcript:', transcript); 
+    setInputText(transcript);
+    setIsListening(false);
   };
+
+  recognition.onerror = (event: any) => {
+    console.error('Speech error:', event.error);
+    if (event.error === 'not-allowed') {
+      alert('Microphone permission denied. Please allow microphone access in your browser settings.');
+    }
+    setIsListening(false);
+  };
+
+  recognition.onend = () => setIsListening(false);
+
+  recognition.start();
+};
 
   const quickPrompts = [
     { emoji: '🌾', text: language === 'hi' ? 'गेहूं की बुवाई कब करें?' : 'When to sow wheat?' },
