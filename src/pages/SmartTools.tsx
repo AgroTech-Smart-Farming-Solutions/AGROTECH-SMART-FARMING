@@ -1,11 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSearchParams } from 'react-router-dom';
-<<<<<<< HEAD
 import { Calendar, AlertTriangle, BookOpen, FileText, Plus, Trash2, Loader2, Download, RefreshCw, WifiOff } from 'lucide-react';
-=======
-import { Calendar, AlertTriangle, BookOpen, FileText, Plus, Trash2, Loader2, Download } from 'lucide-react';
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -41,7 +37,6 @@ const cropCalendarData = {
   },
 };
 
-<<<<<<< HEAD
 interface Scheme {
   name: string;
   description: string;
@@ -49,34 +44,6 @@ interface Scheme {
   deadline: string;
   link?: string;
 }
-=======
-const govtSchemes = [
-  {
-    name: 'PM-KISAN',
-    description: '₹6,000/year direct benefit transfer',
-    eligibility: 'All landholding farmers',
-    deadline: 'Ongoing',
-  },
-  {
-    name: 'Pradhan Mantri Fasal Bima Yojana',
-    description: 'Crop insurance at 2% premium',
-    eligibility: 'Farmers growing notified crops',
-    deadline: 'Before sowing',
-  },
-  {
-    name: 'Kisan Credit Card',
-    description: 'Credit at 4% interest rate',
-    eligibility: 'All farmers, share croppers, tenant farmers',
-    deadline: 'Ongoing',
-  },
-  {
-    name: 'Soil Health Card Scheme',
-    description: 'Free soil testing and fertilizer recommendations',
-    eligibility: 'All farmers',
-    deadline: 'Ongoing',
-  },
-];
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
 
 // ─── Translations ────────────────────────────────────────────────────────────
 const weatherTranslations: Record<string, {
@@ -205,13 +172,8 @@ const farmingAdvice: Record<string, Record<string, { icon: string; tip: string }
     ],
     heat: [
       { icon: '⏰', tip: 'அதிகாலையில் அல்லது மாலையில் மட்டுமே பயிர்களுக்கு தண்ணீர் கொடுங்கள்.' },
-<<<<<<< HEAD
       { icon: '🌿', tip: 'மண் ஈரப்பதம் தக்கவைக்க மల్చ్ ఉపయోగించండి.' },
       { icon: '🧴', tip: 'వేதி పిచికారీని నివారించండి — వేడి ఆవిరిని కలిగిస్తుంది.' },
-=======
-      { icon: '🌿', tip: 'மண் ஈரப்பதம் தக்கவைக்க மல்ச் பயன்படுத்தவும்.' },
-      { icon: '🧴', tip: 'வேதி தெளிப்பதை தவிர்க்கவும் — வெப்பம் ஆவியாக்கும்.' },
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
     ],
     frost: [
       { icon: '🛡️', tip: 'மென்மையான செடிகளை இரவு முழுவதும் மூடி வையுங்கள்.' },
@@ -321,14 +283,11 @@ const SmartTools: React.FC = () => {
   const [weatherAlerts, setWeatherAlerts] = useState<WeatherAlert[]>([]);
   const [isLoadingWeather, setIsLoadingWeather] = useState(true);
 
-<<<<<<< HEAD
   // --- Govt Schemes State ---
   const [govtSchemes, setGovtSchemes] = useState<Scheme[]>([]);
   const [isSchemesLoading, setIsSchemesLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
-=======
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
   const tabs = [
     { id: 'calendar', label: t('cropCalendar'), icon: Calendar },
     { id: 'alerts', label: t('weatherAlerts'), icon: AlertTriangle },
@@ -336,7 +295,6 @@ const SmartTools: React.FC = () => {
     { id: 'schemes', label: t('schemes'), icon: FileText },
   ];
 
-<<<<<<< HEAD
   // ─── Fetch Govt Schemes (Real-time & Offline) ────────────────────
   const fetchSchemes = async () => {
     setIsSchemesLoading(true);
@@ -379,9 +337,6 @@ const SmartTools: React.FC = () => {
   }, [language]);
 
   // ─── Fetch Weather ────────────────────
-=======
-  // ─── Fetch Weather ──────────────────────────────────────────────────────────
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
   useEffect(() => {
     const fetchWeather = async () => {
       setIsLoadingWeather(true);
@@ -420,10 +375,6 @@ const SmartTools: React.FC = () => {
             }
           });
 
-<<<<<<< HEAD
-=======
-          // ✅ FIX: Build the "clear" alert with real data from API
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
           if (alerts.length === 0) {
             alerts.push({
               type: 'clear',
@@ -433,17 +384,9 @@ const SmartTools: React.FC = () => {
             });
           }
 
-<<<<<<< HEAD
           setWeatherAlerts(alerts);
         } catch (err) {
           console.error('Error fetching weather:', err);
-=======
-          // ✅ FIX: setWeatherAlerts is now INSIDE try so it only runs on success
-          setWeatherAlerts(alerts);
-        } catch (err) {
-          console.error('Error fetching weather:', err);
-          // Only set error state if something actually went wrong
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
           setWeatherAlerts([{
             type: 'error',
             message: 'Could not load weather data.',
@@ -475,11 +418,7 @@ const SmartTools: React.FC = () => {
     }
   }, [activeTab, language]);
 
-<<<<<<< HEAD
   // ─── Fetch Ledger ──────────────────
-=======
-  // ─── Fetch Ledger ───────────────────────────────────────────────────────────
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
   useEffect(() => {
     const fetchLedger = async () => {
       if (!user) { setIsLoadingLedger(false); return; }
@@ -538,7 +477,6 @@ const SmartTools: React.FC = () => {
     }
   };
 
-<<<<<<< HEAD
   const downloadLedgerPDF = () => {
     const doc = new jsPDF();
     const date = new Date().toLocaleDateString();
@@ -584,71 +522,13 @@ const SmartTools: React.FC = () => {
 
     doc.save(`Kisan_Khata_${date}.pdf`);
   };
-=======
-  // लगभग लाइन 315 के आस-पास (deleteLedgerEntry के बाद)
-const downloadLedgerPDF = () => {
-  const doc = new jsPDF();
-  const date = new Date().toLocaleDateString();
-
-  // PDF Header
-  doc.setFontSize(20);
-  doc.setTextColor(40, 167, 69); // Green color for Agriculture theme
-  doc.text(language === 'hi' ? 'किसान खाता रिपोर्ट' : 'Kisan Khata Report', 14, 22);
-  
-  doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text(`Date: ${date}`, 14, 30);
-
-  // Summary Table
-  autoTable(doc, {
-    startY: 40,
-    head: [[language === 'hi' ? 'विवरण' : 'Summary', language === 'hi' ? 'राशि' : 'Amount']],
-    body: [
-      [language === 'hi' ? 'कुल आय' : 'Total Income', `INR ${totalIncome}`],
-      [language === 'hi' ? 'कुल खर्च' : 'Total Expense', `INR ${totalExpense}`],
-      [language === 'hi' ? 'शुद्ध लाभ' : 'Net Profit', `INR ${netProfit}`],
-    ],
-    theme: 'striped',
-    headStyles: { fillColor: [40, 167, 69] }
-  });
-
-  // Entries Table
-  autoTable(doc, {
-    startY: doc.lastAutoTable.finalY + 10,
-    head: [[
-      language === 'hi' ? 'तारीख' : 'Date', 
-      language === 'hi' ? 'नाम' : 'Name', 
-      language === 'hi' ? 'श्रेणी' : 'Category', 
-      language === 'hi' ? 'प्रकार' : 'Type', 
-      language === 'hi' ? 'राशि' : 'Amount'
-    ]],
-    body: ledgerEntries.map(entry => [
-      entry.date,
-      entry.name,
-      entry.category,
-      entry.type === 'income' ? (language === 'hi' ? 'आय' : 'Income') : (language === 'hi' ? 'खर्च' : 'Expense'),
-      `Rs. ${entry.amount}`
-    ]),
-    headStyles: { fillColor: [50, 50, 50] }
-  });
-
-  doc.save(`Kisan_Khata_${date}.pdf`);
-};
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
 
   const totalIncome = ledgerEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + Number(e.amount), 0);
   const totalExpense = ledgerEntries.filter(e => e.type === 'expense').reduce((sum, e) => sum + Number(e.amount), 0);
   const netProfit = totalIncome - totalExpense;
 
-<<<<<<< HEAD
   const wt = weatherTranslations[language] || weatherTranslations['en'];
 
-=======
-  // Helper: get translated weather UI text
-  const wt = weatherTranslations[language] || weatherTranslations['en'];
-
-  // Helper: get farming advice for current weather + language
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
   const getAdvice = (type: string) => {
     const langAdvice = farmingAdvice[language] || farmingAdvice['en'];
     return langAdvice[type] || langAdvice['clear'];
@@ -657,19 +537,11 @@ const downloadLedgerPDF = () => {
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-<<<<<<< HEAD
-=======
-        {/* Header */}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
         <div>
           <h1 className="text-xl font-bold">{t('tools')}</h1>
           <p className="text-xs text-muted-foreground">Essential farming tools</p>
         </div>
 
-<<<<<<< HEAD
-=======
-        {/* Tabs */}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
         <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {tabs.map((tab) => {
             const Icon = tab.icon;
@@ -691,10 +563,6 @@ const downloadLedgerPDF = () => {
           })}
         </div>
 
-<<<<<<< HEAD
-=======
-        {/* Tab Content */}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
         <AnimatePresence mode="wait">
 
           {/* ── Crop Calendar ── */}
@@ -739,10 +607,6 @@ const downloadLedgerPDF = () => {
                 </div>
               ) : (
                 <>
-<<<<<<< HEAD
-=======
-                  {/* Main Weather Card */}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
                   {weatherAlerts[0] && (
                     <ClayCard className="relative overflow-hidden">
                       <div className="flex items-center justify-between mb-4">
@@ -762,10 +626,6 @@ const downloadLedgerPDF = () => {
                         </div>
                       </div>
 
-<<<<<<< HEAD
-=======
-                      {/* Status Badge */}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
                       <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium mb-4 ${
                         weatherAlerts[0].severity === 'danger' ? 'bg-destructive/15 text-destructive' :
                         weatherAlerts[0].severity === 'warning' ? 'bg-yellow-500/15 text-yellow-600' :
@@ -780,10 +640,6 @@ const downloadLedgerPDF = () => {
                     </ClayCard>
                   )}
 
-<<<<<<< HEAD
-=======
-                  {/* Farming Advice Card */}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
                   <ClayCard>
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-xl">🌾</span>
@@ -805,10 +661,6 @@ const downloadLedgerPDF = () => {
                     </div>
                   </ClayCard>
 
-<<<<<<< HEAD
-=======
-                  {/* Extra Alerts */}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
                   {weatherAlerts.slice(1).map((alert, index) => (
                     <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
                       <ClayCard className={`border-l-4 ${
@@ -882,7 +734,6 @@ const downloadLedgerPDF = () => {
 
               <ClayCard>
                 <div className="flex items-center justify-between mb-4">
-<<<<<<< HEAD
                   <h3 className="font-bold">{language === 'hi' ? 'हालिया लेनदेन' : 'Recent Entries'}</h3>
                   {ledgerEntries.length > 0 && (
                     <button 
@@ -894,21 +745,6 @@ const downloadLedgerPDF = () => {
                     </button>
                   )}
                 </div>
-=======
-    <h3 className="font-bold">{language === 'hi' ? 'हालिया लेनदेन' : 'Recent Entries'}</h3>
-    
-    {/* नया डाउनलोड बटन */}
-    {ledgerEntries.length > 0 && (
-      <button 
-        onClick={downloadLedgerPDF}
-        className="flex items-center gap-2 text-xs font-medium text-primary hover:bg-primary/10 px-3 py-1.5 rounded-xl transition-colors"
-      >
-        <Download size={14} />
-        {language === 'hi' ? 'डाउनलोड PDF' : 'Download PDF'}
-      </button>
-    )}
-  </div>
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
 
                 <div className="space-y-3">
                   {isLoadingLedger ? (
@@ -941,7 +777,6 @@ const downloadLedgerPDF = () => {
           {/* ── Govt Schemes ── */}
           {activeTab === 'schemes' && (
             <motion.div key="schemes" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-<<<<<<< HEAD
               {isOffline && (
                 <div className="bg-yellow-100 text-yellow-800 text-[10px] p-2 rounded-xl flex items-center gap-2">
                   <WifiOff size={14} /> {language === 'hi' ? 'आप ऑफलाइन हैं। पुराना डेटा दिख रहा है।' : 'Showing offline data.'}
@@ -988,21 +823,6 @@ const downloadLedgerPDF = () => {
                   </motion.div>
                 ))
               )}
-=======
-              {govtSchemes.map((scheme, index) => (
-                <motion.div key={scheme.name} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
-                  <ClayCard variant="hover">
-                    <h3 className="font-bold text-primary mb-2">{scheme.name}</h3>
-                    <p className="text-sm mb-3">{scheme.description}</p>
-                    <div className="flex flex-wrap gap-2 mb-4">
-                      <span className="text-xs px-2 py-1 rounded-full bg-muted">{scheme.eligibility}</span>
-                      <span className="text-xs px-2 py-1 rounded-full bg-accent/50">{scheme.deadline}</span>
-                    </div>
-                    <ClayButton variant="primary" size="sm">{t('applyNow')}</ClayButton>
-                  </ClayCard>
-                </motion.div>
-              ))}
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
             </motion.div>
           )}
 
