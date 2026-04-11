@@ -272,9 +272,6 @@
     50% { transform: scale(1.05); }
     100% { transform: scale(1); opacity: 1; }
   }
-<<<<<<< HEAD
-}
-=======
 
   /* Custom Styled Scrollbar matching AgroTech Theme */
   .scrollbar-custom::-webkit-scrollbar {
@@ -295,4 +292,3 @@
     scrollbar-color: hsl(var(--border)) transparent;
   }
 }
->>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df
