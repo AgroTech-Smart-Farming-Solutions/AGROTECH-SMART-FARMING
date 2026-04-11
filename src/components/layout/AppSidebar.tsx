@@ -83,7 +83,7 @@ export const AppSidebar: React.FC = () => {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="scrollbar-custom">
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-widest text-muted-foreground">
             {!collapsed && (language === 'hi' ? 'मुख्य' : 'Main')}

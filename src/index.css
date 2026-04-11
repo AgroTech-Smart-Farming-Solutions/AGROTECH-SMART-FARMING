@@ -272,4 +272,27 @@
     50% { transform: scale(1.05); }
     100% { transform: scale(1); opacity: 1; }
   }
+<<<<<<< HEAD
 }
+=======
+
+  /* Custom Styled Scrollbar matching AgroTech Theme */
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 20px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground));
+  }
+  .scrollbar-custom {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+}
+>>>>>>> 7d96f724218d846c0d47fe2311c66db07aa275df

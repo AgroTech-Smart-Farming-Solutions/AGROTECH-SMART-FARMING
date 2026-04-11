@@ -106,7 +106,10 @@ export const AnimatedRoutes: React.FC = () => {
             <Route path="/scan" element={<ProtectedRoute><PageWrapper><CropDoctor /></PageWrapper></ProtectedRoute>} />
             <Route path="/tools" element={<ProtectedRoute><PageWrapper><SmartTools /></PageWrapper></ProtectedRoute>} />
             <Route path="/prices" element={<ProtectedRoute><PageWrapper><PricePlanner /></PageWrapper></ProtectedRoute>} />
+           {/* --- AGRI SHORTS ROUTES --- */}
             <Route path="/reels" element={<ProtectedRoute><PageWrapper><AgriShorts /></PageWrapper></ProtectedRoute>} />
+            <Route path="/reels/:id" element={<ProtectedRoute><PageWrapper><AgriShorts /></PageWrapper></ProtectedRoute>} />
+            {/* -------------------------- */}
             <Route path="/profile" element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
             <Route path="/subscription" element={<ProtectedRoute><PageWrapper><Subscription /></PageWrapper></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><PageWrapper><Search /></PageWrapper></ProtectedRoute>} />
