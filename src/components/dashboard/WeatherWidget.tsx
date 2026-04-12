@@ -4,7 +4,6 @@ import { Cloud, Sun, CloudRain, Droplets, Wind, Thermometer, MapPin, Loader2 } f
 import { ClayCard } from '@/components/ui/ClayCard';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-// Map OpenWeatherMap conditions to your UI icons
 const mapCondition = (main: string) => {
   if (main === 'Clear') return 'sunny';
   if (main === 'Rain' || main === 'Drizzle' || main === 'Thunderstorm') return 'rain';
@@ -29,7 +28,6 @@ const WeatherIcon: React.FC<{ condition: string; size?: number; className?: stri
   }
 };
 
-// Helper function to convert your app's language codes to standard BCP 47 locale codes for dates
 const getLocaleCode = (lang: string) => {
   const map: Record<string, string> = {
     en: 'en-IN', hi: 'hi-IN', mr: 'mr-IN', pa: 'pa-IN',
@@ -44,43 +42,7 @@ export const WeatherWidget: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // const fetchWeather = async (lat: number, lon: number) => {
-    //   try {
-    //     const API_KEY = '34bcd684fb54306142476353e9f3d6b0';
-    //     const response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`);
-    //     const data = await response.json();
-        
-    //     if (!data.list) throw new Error("Invalid format");
-
-    //     const current = data.list[0];
-    //     const localeCode = getLocaleCode(language);
-        
-    //     const dailyForecast = [
-    //       data.list[8], data.list[16], data.list[24], data.list[32], data.list[39]
-    //     ].filter(Boolean).map((item: any) => ({
-    //       // Using JS to translate the day of the week safely
-    //       day: new Intl.DateTimeFormat(localeCode, { weekday: 'short' }).format(new Date(item.dt * 1000)),
-    //       temp: Math.round(item.main.temp),
-    //       icon: mapCondition(item.weather[0].main)
-    //     }));
-
-    //     setWeatherData({
-    //       condition: mapCondition(current.weather[0].main),
-    //       temperature: Math.round(current.main.temp),
-    //       feelsLike: Math.round(current.main.feels_like),
-    //       humidity: current.main.humidity,
-    //       windSpeed: Math.round(current.wind.speed * 3.6),
-    //       rainChance: Math.round((current.pop || 0) * 100),
-    //       location: data.city.name,
-    //       uvIndex: 6,
-    //       forecast: dailyForecast,
-    //     });
-    //   } catch (err) {
-    //     console.error('Error fetching widget weather:', err);
-    //   } finally {
-    //     setIsLoading(false);
-    //   }
-    // };
+   
     const fetchWeather = async (lat: number, lon: number, language: string) => {
   try {
     const API_KEY = import.meta.env.VITE_WEATHER_API_KEY;
@@ -89,7 +51,6 @@ export const WeatherWidget: React.FC = () => {
       `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${API_KEY}&units=metric`
     );
 
-    // Fetch does not throw on HTTP errors (e.g., 404, 500), so we must check manually
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

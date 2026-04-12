@@ -10,8 +10,16 @@ serve(async (req) => {
 
   try {
     const { messages, language } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    
+    // UPDATED: Now using the specific Chat key from your secrets
+    // Note: In Supabase secrets, it's usually just "GEMINI_API_KEY_CHAT" 
+    // without the VITE_ prefix (VITE is for frontend).
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY_CHAT");
+    
+    if (!GEMINI_API_KEY) {
+      console.error("GEMINI_API_KEY_CHAT is missing in Supabase secrets");
+      throw new Error("AI configuration missing");
+    }
 
     const langMap: Record<string, string> = {
       en: "English", hi: "Hindi", mr: "Marathi", pa: "Punjabi",
@@ -20,63 +28,42 @@ serve(async (req) => {
     const langName = langMap[language] || "English";
 
     const systemPrompt = `You are "Kisan Sahayak" (किसान सहायक), an expert AI farming assistant for Indian farmers. 
-You have deep knowledge about:
-- Crop cultivation, irrigation, soil health
-- Pest and disease management
-- Government schemes (PM-KISAN, PMFBY, KCC, Soil Health Card)
-- Market prices and selling strategies
-- Organic farming techniques
-- Weather-based farming advice
-- Farm equipment and modern techniques
-
-IMPORTANT RULES:
-1. Always respond in ${langName} language
-2. Give practical, actionable advice
-3. Use simple language that farmers can understand
-4. Include specific quantities, timings, and steps
-5. Mention relevant government schemes when applicable
-6. Be encouraging and supportive
-7. Keep responses concise but informative (2-4 paragraphs max)
-8. Use markdown formatting for better readability`;
+    IMPORTANT RULES:
+    1. Always respond in ${langName} language
+    2. Give practical, actionable advice
+    3. Keep responses concise but informative (2-4 paragraphs max)
+    4. Use markdown formatting for better readability`;
 
     const allMessages = [
       { role: "system", content: systemPrompt },
       ...messages,
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // UPDATED: Switching to Gemini 1.5 Flash for better free-tier stability
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: allMessages,
-        stream: false,
+        contents: allMessages.map(m => ({
+          role: m.role === "system" ? "user" : m.role, // Gemini uses 'user'/'model' roles
+          parts: [{ text: m.content }]
+        })),
       }),
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      return new Response(JSON.stringify({ error: "AI service temporarily unavailable" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      console.error("Gemini API error:", response.status, errText);
+      return new Response(JSON.stringify({ error: "AI service busy. Try again in 1 minute." }), {
+        status: response.status, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content || "Sorry, I could not generate a response.";
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I could not generate a response.";
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

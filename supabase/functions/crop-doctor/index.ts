@@ -10,25 +10,29 @@ serve(async (req) => {
 
   try {
     const { imageBase64, language, cropContext } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not found in Secrets");
-
-    // AAPKI LIST SE SABSE BEST MODEL JO VISION SUPPORT KARTA HAI
-    const modelId = "gemini-2.0-flash-lite"; 
     
-    // Final URL Format for Gemini API
+    // Fetching the NEW secret name we set up
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY_CROP");
+
+    if (!GEMINI_API_KEY) {
+      console.error("Configuration Error: GEMINI_API_KEY_CROP not found");
+      throw new Error("Server configuration error");
+    }
+
+    const modelId = "gemini-2.5-flash"; 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${GEMINI_API_KEY}`;
     
-    console.log(`Analyzing ${cropContext} using: ${modelId}`);
-
     const langMap: Record<string, string> = {
       en: "English", hi: "Hindi", mr: "Marathi", pa: "Punjabi",
       ta: "Tamil", te: "Telugu", bn: "Bengali", gu: "Gujarati",
     };
     const langName = langMap[language] || "English";
 
-    const prompt = `You are a plant pathologist. Analyze this ${cropContext} leaf. Return ONLY a JSON: {"disease":"","confidence":0,"description":"","severity":"","treatment":[],"fertilizer":"","prevention":""} in ${langName}.`;
+    // Enhanced prompt for better JSON reliability
+    const prompt = `You are an expert plant pathologist. Analyze this ${cropContext} leaf image. 
+    Provide a detailed diagnosis in ${langName} language.
+    Return ONLY a valid JSON object with this structure:
+    {"disease": "name of disease", "confidence": percentage, "description": "detailed explanation", "severity": "Low/Medium/High", "treatment": ["step 1", "step 2"], "fertilizer": "recommended fertilizer", "prevention": "how to prevent in future"}`;
 
     let cleanBase64 = imageBase64;
     if (imageBase64.includes(",")) {
@@ -47,6 +51,7 @@ serve(async (req) => {
         }],
         generationConfig: {
           response_mime_type: "application/json",
+          temperature: 0.4, // Lower temperature makes JSON more consistent
         },
       }),
     });
@@ -54,8 +59,17 @@ serve(async (req) => {
     const result = await response.json();
     
     if (!response.ok) {
-      console.error("Gemini API Error:", JSON.stringify(result));
+      console.error("Gemini API Error Detail:", JSON.stringify(result));
+      // Specifically handle the 429 error for the user
+      if (response.status === 429) {
+        throw new Error("The AI is a bit busy right now. Please wait 60 seconds and try again.");
+      }
       throw new Error(result.error?.message || "Analysis failed");
+    }
+
+    // Safety check for empty results
+    if (!result.candidates || !result.candidates[0]) {
+      throw new Error("AI could not analyze this image. Please try a clearer photo.");
     }
 
     const rawContent = result.candidates[0].content.parts[0].text;
@@ -66,7 +80,7 @@ serve(async (req) => {
     });
 
   } catch (e) {
-    console.error("Critical Error:", e.message);
+    console.error("Critical Error in crop-doctor:", e.message);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

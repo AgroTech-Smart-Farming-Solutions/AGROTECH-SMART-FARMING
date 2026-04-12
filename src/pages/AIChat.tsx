@@ -39,47 +39,6 @@ const AIChat: React.FC = () => {
   const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(() => { scrollToBottom(); }, [messages]);
 
-  // const sendMessage = async () => {
-  //   if (!inputText.trim() || isLoading) return;
-
-  //   // Check credits before sending
-  //   const credits = await checkCredits('ai');
-  //   setCreditInfo(credits);
-  //   if (!credits.allowed) return;
-
-  //   const userMessage: Message = {
-  //     id: Date.now().toString(), role: 'user', content: inputText, timestamp: new Date(),
-  //   };
-  //   setMessages(prev => [...prev, userMessage]);
-  //   setInputText('');
-  //   setIsLoading(true);
-
-  //   try {
-  //     const chatHistory = [...messages, userMessage].map(m => ({ role: m.role, content: m.content }));
-  //     const { data, error } = await supabase.functions.invoke('ai-chat', {
-  //       body: { messages: chatHistory, language },
-  //     });
-  //     if (error) throw error;
-
-  //     // Deduct credit after successful response
-  //     await deductCredit('ai');
-  //     const updatedCredits = await checkCredits('ai');
-  //     setCreditInfo(updatedCredits);
-
-  //     setMessages(prev => [...prev, {
-  //       id: (Date.now() + 1).toString(), role: 'assistant',
-  //       content: data.reply || 'Sorry, I could not generate a response.', timestamp: new Date(),
-  //     }]);
-  //   } catch (err) {
-  //     console.error('AI Chat error:', err);
-  //     setMessages(prev => [...prev, {
-  //       id: (Date.now() + 1).toString(), role: 'assistant',
-  //       content: '⚠️ Sorry, I encountered an error. Please try again.', timestamp: new Date(),
-  //     }]);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
 
   const sendMessage = async () => {
   if (!inputText.trim() || isLoading) return;
@@ -96,7 +55,7 @@ const AIChat: React.FC = () => {
   setIsLoading(true);
 
   try {
-    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+    const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY_CHAT;
 
     const langMap: Record<string, string> = {
       en: "English", hi: "Hindi", mr: "Marathi", pa: "Punjabi",
@@ -104,11 +63,15 @@ const AIChat: React.FC = () => {
     };
     const langName = langMap[language] || "English";
 
+    // --- REPLACE YOUR SYSTEM PROMPT WITH THIS ---
     const systemPrompt = `You are "Kisan Sahayak" (किसान सहायक), an expert AI farming assistant for Indian farmers. 
-You have deep knowledge about crop cultivation, irrigation, soil health, pest and disease management, 
-Government schemes (PM-KISAN, PMFBY, KCC), market prices, organic farming, and modern techniques.
-IMPORTANT: Always respond in ${langName}. Give practical advice in simple language. 
-Keep responses concise (2-4 paragraphs). Use markdown formatting.`;
+    You have deep knowledge about crop cultivation, irrigation, soil health, pest and disease management, 
+    Government schemes (PM-KISAN, PMFBY, KCC), market prices, organic farming, and modern techniques.
+    IMPORTANT RULES: 
+    1. You MUST respond entirely in the ${langName} language. Do not use English unless explicitly asked.
+    2. Give practical advice in simple language. 
+    3. Keep responses concise (2-4 paragraphs). 
+    4. Use markdown formatting.`;
 
     // Convert history to Gemini format
     const chatHistory = [...messages, userMessage];
@@ -246,11 +209,12 @@ Keep responses concise (2-4 paragraphs). Use markdown formatting.`;
   recognition.start();
 };
 
+  // --- REPLACE YOUR QUICK PROMPTS WITH THIS ---
   const quickPrompts = [
-    { emoji: '🌾', text: language === 'hi' ? 'गेहूं की बुवाई कब करें?' : 'When to sow wheat?' },
-    { emoji: '🐛', text: language === 'hi' ? 'कीट नियंत्रण कैसे करें?' : 'How to control pests?' },
-    { emoji: '💧', text: language === 'hi' ? 'सिंचाई के सही तरीके?' : 'Best irrigation methods?' },
-    { emoji: '🏛️', text: language === 'hi' ? 'PM-KISAN योजना की जानकारी' : 'PM-KISAN scheme details' },
+    { emoji: '🌾', text: t('sowWheat') },
+    { emoji: '🐛', text: t('controlPests') },
+    { emoji: '💧', text: t('irrigationMethods') },
+    { emoji: '🏛️', text: t('pmKisanDetails') },
   ];
 
   const noCredits = creditInfo && !creditInfo.allowed && !creditInfo.isPremium;
@@ -370,11 +334,13 @@ Keep responses concise (2-4 paragraphs). Use markdown formatting.`;
               className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isListening ? 'bg-destructive text-destructive-foreground animate-pulse' : 'clay-inset text-primary'}`}>
               {isListening ? <MicOff size={20} /> : <Mic size={20} />}
             </motion.button>
-            <Input value={inputText} onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder={noCredits ? 'Upgrade to Pro for more credits' : isListening ? t('listening') : t('askAnything')}
-              disabled={!!noCredits}
-              className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm" />
+            {/* --- REPLACE YOUR INPUT COMPONENT WITH THIS --- */}
+    <Input value={inputText} onChange={(e) => setInputText(e.target.value)}
+      onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+      placeholder={noCredits ? t('upgradeToProCredits') : isListening ? t('listening') : t('askAnything')}
+      disabled={!!noCredits}
+      className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm" 
+    />
             <motion.button onClick={sendMessage} whileTap={{ scale: 0.95 }} disabled={!inputText.trim() || isLoading || !!noCredits}
               className="w-12 h-12 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-50">
               {isLoading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
