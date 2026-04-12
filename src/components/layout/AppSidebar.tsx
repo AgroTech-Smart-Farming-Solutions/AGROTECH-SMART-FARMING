@@ -1,5 +1,8 @@
 import React from 'react';
-import { Home, MessageCircle, ScanLine, Search, Mail, Wrench, TrendingUp, Play, User, Moon, Sun, Languages, Crown } from 'lucide-react';
+import { 
+  Home, MessageCircle, ScanLine, TrendingUp, Play, Moon, Sun, 
+  Languages, Crown, Calendar, AlertTriangle, BookOpen, FileText 
+} from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/hooks/useTheme';
@@ -18,7 +21,6 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar';
-// IMPORTANT: Import the Dropdown Menu components
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,18 +28,21 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+// --- MAIN NAV (Agri Shorts ko yahan move kar diya) ---
 const mainNav = [
   { icon: Home, path: '/', key: 'home', label: 'Dashboard' },
   { icon: MessageCircle, path: '/chat', key: 'chat', label: 'AI Chat', badge: 'AI' },
   { icon: ScanLine, path: '/scan', key: 'scan', label: 'Dr. Disease' },
-  { icon: Search, path: '/search', key: 'search', label: 'Search' },
-  { icon: Mail, path: '/messages', key: 'messages', label: 'Messages' },
+  { icon: Play, path: '/reels', key: 'reels', label: 'Agri Shorts' },
 ];
 
+// --- TOOLS NAV (Ab isme 5 alag tools hain) ---
 const toolsNav = [
-  { icon: Wrench, path: '/tools', key: 'tools', label: 'Smart Tools' },
+  { icon: Calendar, path: '/calendar', key: 'cropCalendar', label: 'Crop Calendar' },
+  { icon: AlertTriangle, path: '/alerts', key: 'weatherAlerts', label: 'Weather Alerts' },
+  { icon: BookOpen, path: '/ledger', key: 'ledger', label: 'Kisan Khata' },
+  { icon: FileText, path: '/schemes', key: 'schemes', label: 'Govt Schemes' },
   { icon: TrendingUp, path: '/prices', key: 'prices', label: 'Prices' },
-  { icon: Play, path: '/reels', key: 'reels', label: 'Agri Shorts' },
 ];
 
 export const AppSidebar: React.FC = () => {
@@ -51,10 +56,8 @@ export const AppSidebar: React.FC = () => {
 
   const languages = ['en', 'hi', 'mr', 'pa', 'ta', 'te', 'bn', 'gu'] as const;
   
-  // Keep short names for the collapsed sidebar icon
   const languageNames: Record<string, string> = { en: 'EN', hi: 'हि', mr: 'म', pa: 'ਪੰ', ta: 'த', te: 'తె', bn: 'বা', gu: 'ગુ' };
   
-  // Add full names for the dropdown menu list
   const fullLanguageNames: Record<string, string> = { 
     en: 'English', hi: 'हिन्दी', mr: 'मराठी', pa: 'ਪੰਜਾਬੀ', 
     ta: 'தமிழ்', te: 'తెలుగు', bn: 'বাংলা', gu: 'ગુજરાતી' 
@@ -77,7 +80,7 @@ export const AppSidebar: React.FC = () => {
               <h2 className="font-extrabold text-base text-sidebar-foreground whitespace-nowrap">
                 Agro<span className="text-sidebar-primary">Tech</span>
               </h2>
-              <p className="text-[10px] text-muted-foreground whitespace-nowrap">{t('smartFarming')}</p>
+              <p className="text-[10px] text-muted-foreground whitespace-nowrap">{t('smartFarming') || 'Smart Farming'}</p>
             </div>
           )}
         </div>
@@ -108,7 +111,7 @@ export const AppSidebar: React.FC = () => {
                       <Icon size={20} strokeWidth={active ? 2.5 : 2} />
                       {!collapsed && (
                         <span className="flex-1 flex items-center justify-between">
-                          <span className="text-[13px]">{t(item.key)}</span>
+                          <span className="text-[13px]">{t(item.key) || item.label}</span>
                           {item.badge && (
                             <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase rounded-md bg-sidebar-primary/15 text-sidebar-primary">
                               {item.badge}
@@ -146,7 +149,7 @@ export const AppSidebar: React.FC = () => {
                       }`}
                     >
                       <Icon size={20} strokeWidth={active ? 2.5 : 2} />
-                      {!collapsed && <span className="text-[13px]">{t(item.key)}</span>}
+                      {!collapsed && <span className="text-[13px]">{t(item.key) || item.label}</span>}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -157,10 +160,7 @@ export const AppSidebar: React.FC = () => {
       </SidebarContent>
 
       <SidebarFooter className="p-3 space-y-1">
-        {/* Language + Theme */}
         <div className={`flex ${collapsed ? 'flex-col' : ''} gap-1`}>
-          
-          {/* NEW DROPDOWN MENU FOR LANGUAGES */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 px-3 py-2 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full outline-none">
@@ -194,7 +194,6 @@ export const AppSidebar: React.FC = () => {
           </button>
         </div>
 
-        {/* Subscription CTA */}
         {!collapsed && (
           <button
             onClick={() => navigate('/subscription')}
@@ -205,7 +204,6 @@ export const AppSidebar: React.FC = () => {
           </button>
         )}
 
-        {/* User Profile */}
         {user && (
           <button
             onClick={() => navigate('/profile')}

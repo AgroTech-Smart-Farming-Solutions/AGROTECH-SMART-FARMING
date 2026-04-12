@@ -35,7 +35,7 @@ const quickAccessItems = [
   { 
     icon: BookOpen, 
     key: 'ledger', 
-    path: '/tools?tab=ledger',
+    path: '/ledger',
     gradient: 'from-secondary to-secondary/70',
     bgGlow: 'bg-secondary/20',
     description: 'Track expenses',
@@ -43,7 +43,7 @@ const quickAccessItems = [
   { 
     icon: FileText, 
     key: 'schemes', 
-    path: '/tools?tab=schemes',
+    path: '/schemes',
     gradient: 'from-accent to-accent/70',
     bgGlow: 'bg-accent/20',
     description: 'Govt. subsidies',
@@ -51,7 +51,7 @@ const quickAccessItems = [
   { 
     icon: Calendar, 
     key: 'cropCalendar', 
-    path: '/tools?tab=calendar',
+    path: '/calendar',
     gradient: 'from-primary/80 to-primary',
     bgGlow: 'bg-primary/15',
     description: 'Plan harvests',
@@ -59,7 +59,7 @@ const quickAccessItems = [
   { 
     icon: AlertTriangle, 
     key: 'weatherAlerts', 
-    path: '/tools?tab=alerts',
+    path: '/alerts',
     gradient: 'from-destructive to-destructive/70',
     bgGlow: 'bg-destructive/15',
     description: 'Storm warnings',

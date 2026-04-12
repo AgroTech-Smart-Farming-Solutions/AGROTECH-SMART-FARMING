@@ -1,66 +1,67 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Signature Verify karne ki Ninja Technique
+async function verifySignature(orderId: string, paymentId: string, signature: string, secret: string) {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(secret);
+  const messageData = encoder.encode(`${orderId}|${paymentId}`);
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+
+  const signatureBuffer = await crypto.subtle.sign('HMAC', cryptoKey, messageData);
+  const signatureArray = Array.from(new Uint8Array(signatureBuffer));
+  const generatedSignature = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+  return generatedSignature === signature;
+}
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No auth header");
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) throw new Error('No authorization header')
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = await req.json()
+    const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET') || '';
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
+    const isValid = await verifySignature(razorpay_order_id, razorpay_payment_id, razorpay_signature, keySecret);
+    if (!isValid) throw new Error('Invalid payment signature');
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan_id } = await req.json();
+    // Supabase DB Update karne ke liye Admin Client
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
 
-    // Verify signature using HMAC SHA256
-    const RAZORPAY_KEY_SECRET = Deno.env.get("RAZORPAY_KEY_SECRET") || "GwaAHuQU32PZYypIVAIbd9H6";
-    const body = `${razorpay_order_id}|${razorpay_payment_id}`;
-    
-    const key = await crypto.subtle.importKey(
-      "raw",
-      new TextEncoder().encode(RAZORPAY_KEY_SECRET),
-      { name: "HMAC", hash: "SHA-256" },
-      false,
-      ["sign"]
-    );
-    const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(body));
-    const expectedSignature = Array.from(new Uint8Array(signature))
-      .map(b => b.toString(16).padStart(2, "0"))
-      .join("");
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
-    if (expectedSignature !== razorpay_signature) {
-      throw new Error("Payment verification failed");
-    }
+    if (userError || !user) throw new Error('User not found');
 
-    // Update user subscription to premium
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // 🚀 BUM! User ko premium bana diya
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({ subscription: 'premium' })
+      .eq('user_id', user.id);
 
-    await adminClient.from("profiles").update({
-      subscription: "premium",
-    }).eq("user_id", user.id);
+    if (updateError) throw updateError;
 
-    return new Response(JSON.stringify({ success: true, message: "Subscription activated!" }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-  } catch (e) {
-    console.error("Verification error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(JSON.stringify({ success: true }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    })
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    })
   }
-});
+})

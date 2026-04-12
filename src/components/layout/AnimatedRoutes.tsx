@@ -7,14 +7,17 @@ import Dashboard from '@/pages/Dashboard';
 import Login from '@/pages/Login';
 import AIChat from '@/pages/AIChat';
 import CropDoctor from '@/pages/CropDoctor';
-import SmartTools from '@/pages/SmartTools';
 import PricePlanner from '@/pages/PricePlanner';
 import AgriShorts from '@/pages/AgriShorts';
 import Profile from '@/pages/Profile';
 import Subscription from '@/pages/Subscription';
-import Search from '@/pages/Search';
-import Messages from '@/pages/Messages';
 import NotFound from '@/pages/NotFound';
+
+// --- NAYE PAGES IMPORTS ---
+import CropCalendar from '@/pages/CropCalendar';
+import WeatherAlerts from '@/pages/WeatherAlerts';
+import KisanKhata from '@/pages/KisanKhata';
+import GovtSchemes from '@/pages/GovtSchemes';
 
 const pageVariants = {
   initial: { opacity: 0, y: 20, scale: 0.98 },
@@ -104,7 +107,13 @@ export const AnimatedRoutes: React.FC = () => {
             <Route path="/" element={<ProtectedRoute><PageWrapper><Dashboard /></PageWrapper></ProtectedRoute>} />
             <Route path="/chat" element={<ProtectedRoute><PageWrapper><AIChat /></PageWrapper></ProtectedRoute>} />
             <Route path="/scan" element={<ProtectedRoute><PageWrapper><CropDoctor /></PageWrapper></ProtectedRoute>} />
-            <Route path="/tools" element={<ProtectedRoute><PageWrapper><SmartTools /></PageWrapper></ProtectedRoute>} />
+            
+            {/* --- NAYE TOOLS ROUTES --- */}
+            <Route path="/calendar" element={<ProtectedRoute><PageWrapper><CropCalendar /></PageWrapper></ProtectedRoute>} />
+            <Route path="/alerts" element={<ProtectedRoute><PageWrapper><WeatherAlerts /></PageWrapper></ProtectedRoute>} />
+            <Route path="/ledger" element={<ProtectedRoute><PageWrapper><KisanKhata /></PageWrapper></ProtectedRoute>} />
+            <Route path="/schemes" element={<ProtectedRoute><PageWrapper><GovtSchemes /></PageWrapper></ProtectedRoute>} />
+            
             <Route path="/prices" element={<ProtectedRoute><PageWrapper><PricePlanner /></PageWrapper></ProtectedRoute>} />
            {/* --- AGRI SHORTS ROUTES --- */}
             <Route path="/reels" element={<ProtectedRoute><PageWrapper><AgriShorts /></PageWrapper></ProtectedRoute>} />
@@ -112,8 +121,6 @@ export const AnimatedRoutes: React.FC = () => {
             {/* -------------------------- */}
             <Route path="/profile" element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
             <Route path="/subscription" element={<ProtectedRoute><PageWrapper><Subscription /></PageWrapper></ProtectedRoute>} />
-            <Route path="/search" element={<ProtectedRoute><PageWrapper><Search /></PageWrapper></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><PageWrapper><Messages /></PageWrapper></ProtectedRoute>} />
             <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
           </Routes>
         </AnimatePresence>

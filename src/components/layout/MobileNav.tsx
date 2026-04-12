@@ -1,17 +1,18 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, MessageCircle, ScanLine, Search, User, Moon, Sun } from 'lucide-react';
+import { Home, Play, ScanLine, BookOpen, User, Moon, Sun } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useTheme } from '@/hooks/useTheme';
 
+// --- UPDATED NAV ITEMS ---
 const navItems = [
-  { icon: Home, path: '/', key: 'home' },
-  { icon: Search, path: '/search', key: 'search' },
-  { icon: ScanLine, path: '/scan', key: 'scan', isCenter: true },
-  { icon: MessageCircle, path: '/messages', key: 'messages' },
-  { icon: User, path: '/profile', key: 'profile' },
+  { icon: Home, path: '/', key: 'home', label: 'Home' },
+  { icon: Play, path: '/reels', key: 'reels', label: 'Shorts' }, // Added Shorts
+  { icon: ScanLine, path: '/scan', key: 'scan', label: 'Dr. Disease', isCenter: true },
+  { icon: BookOpen, path: '/ledger', key: 'ledger', label: 'Khata' }, // Added Khata
+  { icon: User, path: '/profile', key: 'profile', label: 'Profile' },
 ];
 
 export const MobileNav: React.FC = () => {
@@ -32,7 +33,7 @@ export const MobileNav: React.FC = () => {
         </motion.button>
 
         {navItems.map((item, index) => {
-          const isActive = location.pathname === item.path;
+          const isActive = location.pathname === item.path || (item.path === '/reels' && location.pathname.startsWith('/reels'));
           const Icon = item.icon;
           
           if (item.isCenter) {
@@ -44,7 +45,7 @@ export const MobileNav: React.FC = () => {
                   whileHover={{ scale: 1.05, y: -4 }} animate={isActive ? { y: -4 } : { y: 0 }}>
                   <Icon size={26} className="text-white drop-shadow-md" />
                 </motion.div>
-                <span className="text-[9px] font-semibold text-center block mt-1.5 text-primary">{t(item.key)}</span>
+                <span className="text-[9px] font-semibold text-center block mt-1.5 text-primary">{t(item.key) || item.label}</span>
               </motion.button>
             );
           }
@@ -57,7 +58,7 @@ export const MobileNav: React.FC = () => {
                 animate={isActive ? { scale: [1, 1.2, 1] } : {}} transition={{ duration: 0.3 }}>
                 <Icon size={22} />
               </motion.div>
-              <span className={cn("text-[10px] font-medium transition-colors duration-300", isActive ? "text-primary" : "text-muted-foreground")}>{t(item.key)}</span>
+              <span className={cn("text-[10px] font-medium transition-colors duration-300", isActive ? "text-primary" : "text-muted-foreground")}>{t(item.key) || item.label}</span>
               <AnimatePresence>
                 {isActive && <motion.div layoutId="mobileActiveIndicator" className="absolute -bottom-1 w-8 h-1 rounded-full bg-gradient-to-r from-primary to-emerald" initial={{ scaleX: 0 }} animate={{ scaleX: 1 }} exit={{ scaleX: 0 }} />}
               </AnimatePresence>
