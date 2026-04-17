@@ -14,10 +14,10 @@ serve(async (req) => {
     // UPDATED: Now using the specific Chat key from your secrets
     // Note: In Supabase secrets, it's usually just "GEMINI_API_KEY_CHAT" 
     // without the VITE_ prefix (VITE is for frontend).
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY_CHAT");
+    const GEMINI_API_KEY = Deno.env.get("VITE_GEMINI_API_KEY_AICHAT");
     
     if (!GEMINI_API_KEY) {
-      console.error("GEMINI_API_KEY_CHAT is missing in Supabase secrets");
+      console.error("GEMINI_API_KEY_AICHAT is missing in Supabase secrets");
       throw new Error("AI configuration missing");
     }
 
