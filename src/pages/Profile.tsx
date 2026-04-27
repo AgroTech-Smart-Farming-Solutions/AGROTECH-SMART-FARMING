@@ -2,16 +2,18 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
-  MapPin, Settings, LogOut, Crown, Camera, Grid3X3, Bookmark, Heart, Plus, Edit3, CheckCircle2, Share2, Image, Loader2, X, ImagePlus
+  MapPin, LogOut, Crown, Camera, Grid3X3, Bookmark, Heart, 
+  Plus, CheckCircle2, Share2, Loader2, X, 
+  UploadCloud, Sprout, PlusSquare, Music, Layers, Globe
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
-import { ClayCard, ClayButton } from '@/components/ui/ClayCard';
+import { ClayCard } from '@/components/ui/ClayCard';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import logoImg from '@/assets/logo.png';
+import { toast } from 'sonner';
 
 type TabType = 'posts' | 'saved';
 
@@ -19,29 +21,41 @@ const Profile: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const { user, profile, logout, uploadAvatar, isAuthenticated, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  
+  // States
   const [activeTab, setActiveTab] = useState<TabType>('posts');
-  const [posts, setPosts] = useState<{ id: string; image_url: string | null; caption: string | null; likes: number }[]>([]);
+  const [posts, setPosts] = useState<any[]>([]);
   const [savedPosts, setSavedPosts] = useState<any[]>([]);
-  const [isFollowing, setIsFollowing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
+  const [showLanguage, setShowLanguage] = useState(false);
+  
+  // Edit Profile States
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [updatingProfile, setUpdatingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '', username: '', bio: '', location: '', farm_size: '', primary_crops: ''
+  });
+
+  // New Post States
   const [showNewPost, setShowNewPost] = useState(false);
   const [newPostCaption, setNewPostCaption] = useState('');
-  const [newPostImage, setNewPostImage] = useState<File | null>(null);
-  const [newPostPreview, setNewPostPreview] = useState<string | null>(null);
+  const [newPostMediaFiles, setNewPostMediaFiles] = useState<File[]>([]);
+  const [newPostPreviews, setNewPostPreviews] = useState<string[]>([]);
   const [newPostMediaType, setNewPostMediaType] = useState<'image' | 'video'>('image');
+  const [newPostAudio, setNewPostAudio] = useState<File | null>(null);
+  const [newPostAudioPreview, setNewPostAudioPreview] = useState<string | null>(null);
   const [postingNew, setPostingNew] = useState(false);
+  
+  // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const postImageRef = useRef<HTMLInputElement>(null);
+  const postAudioRef = useRef<HTMLInputElement>(null);
 
   const languages = [
     { code: 'en' as const, label: 'English' },
     { code: 'hi' as const, label: 'हिंदी' },
-    { code: 'mr' as const, label: 'मराठी' },
     { code: 'pa' as const, label: 'ਪੰਜਾਬੀ' },
-    { code: 'ta' as const, label: 'தமிழ்' },
-    { code: 'te' as const, label: 'తెలుగు' },
-    { code: 'bn' as const, label: 'বাংলা' },
     { code: 'gu' as const, label: 'ગુજરાતી' },
   ];
 
@@ -52,21 +66,38 @@ const Profile: React.FC = () => {
     fetchSavedPosts();
   }, [isAuthenticated]);
 
+  useEffect(() => {
+    if (showEditProfile && profile) {
+      setEditForm({
+        name: profile.name || '',
+        username: (profile as any).username || '',
+        bio: profile.bio || '',
+        location: profile.location || '',
+        farm_size: profile.farm_size || '',
+        primary_crops: profile.primary_crops ? profile.primary_crops.join(', ') : ''
+      });
+    }
+  }, [showEditProfile, profile]);
+
   const fetchPosts = async () => {
     if (!user) return;
-    const { data } = await supabase.from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
+    const { data } = await (supabase as any).from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
     if (data) setPosts(data);
   };
 
   const fetchFollowCounts = async () => {
     if (!user) return;
-    const { data } = await supabase.rpc('get_follow_counts', { _user_id: user.id });
-    if (data && data[0]) setFollowCounts({ followers: Number(data[0].followers_count), following: Number(data[0].following_count) });
+    try {
+      const { data } = await (supabase as any).rpc('get_follow_counts', { _user_id: user.id });
+      if (data && data[0]) setFollowCounts({ followers: Number(data[0].followers_count), following: Number(data[0].following_count) });
+    } catch (e) {
+      console.log('Followers table not ready yet');
+    }
   };
 
   const fetchSavedPosts = async () => {
     if (!user) return;
-    const { data } = await supabase.from('saved_posts').select('*, posts(*)').eq('user_id', user.id).order('created_at', { ascending: false });
+    const { data } = await (supabase as any).from('saved_posts').select('*, posts(*)').eq('user_id', user.id).order('created_at', { ascending: false });
     if (data) setSavedPosts(data);
   };
 
@@ -80,266 +111,411 @@ const Profile: React.FC = () => {
     setUploading(false);
   };
 
-  const handleNewPostImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNewPostMedia = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const hasVideo = files.some(f => f.type.startsWith('video'));
+    if (hasVideo && files.length > 1) {
+      toast.error(t('singleVideoOnly') || 'You can only select 1 video per post.');
+      return;
+    }
+    setNewPostMediaFiles(files);
+    setNewPostPreviews(files.map(f => URL.createObjectURL(f)));
+    setNewPostMediaType(hasVideo ? 'video' : 'image');
+  };
+
+  const handleNewPostAudio = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setNewPostImage(file);
-    setNewPostPreview(URL.createObjectURL(file));
-    setNewPostMediaType(file.type.startsWith('video') ? 'video' : 'image');
+    setNewPostAudio(file);
+    setNewPostAudioPreview(URL.createObjectURL(file));
+  };
+
+  const resetNewPost = () => {
+    setShowNewPost(false);
+    setNewPostCaption('');
+    setNewPostMediaFiles([]);
+    setNewPostPreviews([]);
+    setNewPostAudio(null);
+    setNewPostAudioPreview(null);
   };
 
   const createPost = async () => {
-    if (!user || (!newPostCaption.trim() && !newPostImage)) return;
+    if (!user || (!newPostCaption.trim() && !newPostMediaFiles.length)) return;
     setPostingNew(true);
-    let imageUrl: string | null = null;
-    if (newPostImage) {
-      const ext = newPostImage.name.split('.').pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('post-images').upload(path, newPostImage, { upsert: true });
-      if (!upErr) {
-        const { data } = supabase.storage.from('post-images').getPublicUrl(path);
-        imageUrl = data.publicUrl;
+    try {
+      const uploadedMediaUrls = [];
+      for (const file of newPostMediaFiles) {
+        const ext = file.name.split('.').pop();
+        const path = `${user.id}/media_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+        const { error } = await supabase.storage.from('post-images').upload(path, file, { upsert: true });
+        if (!error) {
+          const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+          uploadedMediaUrls.push(data.publicUrl);
+        }
       }
+
+      let audioUrl = null;
+      if (newPostAudio) {
+        const ext = newPostAudio.name.split('.').pop();
+        const path = `${user.id}/audio_${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+        const { error } = await supabase.storage.from('post-images').upload(path, newPostAudio, { upsert: true });
+        if (!error) {
+          const { data } = supabase.storage.from('post-images').getPublicUrl(path);
+          audioUrl = data.publicUrl;
+        }
+      }
+
+      await (supabase as any).from('posts').insert({ 
+        user_id: user.id, caption: newPostCaption || null, image_url: uploadedMediaUrls[0] || null, 
+        media_urls: uploadedMediaUrls, audio_url: audioUrl, media_type: newPostMediaType 
+      });
+
+      resetNewPost();
+      fetchPosts();
+      toast.success(t('postedSuccessfully') || 'Post created successfully!');
+    } catch (error) {
+      toast.error('Failed to upload post');
+    } finally {
+      setPostingNew(false);
     }
-    await supabase.from('posts').insert({ user_id: user.id, caption: newPostCaption || null, image_url: imageUrl, media_type: newPostMediaType });
-    setNewPostCaption('');
-    setNewPostImage(null);
-    setNewPostPreview(null);
-    setShowNewPost(false);
-    setPostingNew(false);
-    fetchPosts();
   };
 
-  const stats = [
-    { label: t('posts'), value: posts.length },
-    { label: t('followers'), value: followCounts.followers },
-    { label: t('following'), value: followCounts.following },
-  ];
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setUpdatingProfile(true);
+    try {
+      const cropsArray = editForm.primary_crops
+        ? editForm.primary_crops.split(',').map(c => c.trim()).filter(Boolean)
+        : [];
+      const { error } = await (supabase as any).from('profiles').update({
+        name: editForm.name, username: editForm.username, bio: editForm.bio,
+        location: editForm.location, farm_size: editForm.farm_size, primary_crops: cropsArray
+      }).eq('id', user.id);
+
+      if (error) throw error;
+      toast.success('Profile updated successfully!');
+      setShowEditProfile(false);
+      
+      if (typeof refreshProfile === 'function') await refreshProfile();
+      else window.location.reload(); 
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update profile');
+    } finally {
+      setUpdatingProfile(false);
+    }
+  };
+
+  const handleShareProfile = async () => {
+    const url = `${window.location.origin}/profile/${(profile as any)?.username || user?.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(t('linkCopied') || 'Profile link copied!');
+    } catch (err) {
+      toast.error('Failed to copy link');
+    }
+  };
 
   return (
     <AppLayout>
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+      <div className="w-full max-w-2xl mx-auto bg-background min-h-screen pb-20">
+        
+        {/* Hidden Inputs */}
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-        <input ref={postImageRef} type="file" accept="image/*,video/*" onChange={handleNewPostImage} className="hidden" />
+        <input ref={postImageRef} type="file" accept="image/*,video/*" multiple onChange={handleNewPostMedia} className="hidden" />
+        <input ref={postAudioRef} type="file" accept="audio/*" onChange={handleNewPostAudio} className="hidden" />
 
-        {/* Profile Header */}
-        <ClayCard className="relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-primary/25 via-emerald/15 to-accent/20" />
-          <div className="relative pt-10 px-1">
-            <div className="flex items-end gap-4 mb-4">
-              <div className="relative -mt-14">
-                <motion.div whileHover={{ scale: 1.05 }} className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl bg-gradient-to-br from-primary to-emerald p-[3px] shadow-xl" style={{ boxShadow: '0 6px 20px hsl(var(--primary) / 0.25)' }}>
-                  <div className="w-full h-full rounded-[21px] bg-card flex items-center justify-center overflow-hidden">
-                    {uploading ? <Loader2 size={32} className="animate-spin text-primary" /> : profile?.avatar_url ? (
-                      <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-                    ) : (
-                      <span className="text-4xl sm:text-5xl font-bold text-primary">{profile?.name?.charAt(0) || '?'}</span>
-                    )}
-                  </div>
-                </motion.div>
-                <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => fileInputRef.current?.click()}
-                  className="absolute -bottom-1 -right-1 w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg border-2 border-card">
-                  <Camera size={15} />
-                </motion.button>
-              </div>
-              <div className="flex-1 flex justify-around pb-2">
-                {stats.map((stat, index) => (
-                  <motion.div key={stat.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }} className="text-center">
-                    <p className="text-lg sm:text-xl font-bold text-foreground">{stat.value}</p>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground">{stat.label}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
+        {/* --- TOP NAVIGATION (Clean, Icons Only) --- */}
+        <div className="flex items-center justify-between px-4 py-3 sticky top-0 bg-background/95 backdrop-blur-md z-30 border-b border-border/40">
+          <div className="flex items-center gap-1.5 font-bold text-lg sm:text-xl text-foreground">
+            @{(profile as any)?.username || 'farmer_' + user?.id.substring(0, 5)}
+            <Crown size={16} className="text-amber-500" />
+          </div>
+          <div className="flex items-center gap-4 text-foreground">
+            <button onClick={() => setShowNewPost(true)} className="hover:opacity-70 transition"><PlusSquare size={24} /></button>
+            <button onClick={() => setShowLanguage(true)} className="hover:opacity-70 transition"><Globe size={24} /></button>
+            <button onClick={handleLogout} className="hover:text-destructive transition"><LogOut size={24} /></button>
+          </div>
+        </div>
 
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-lg sm:text-xl font-bold text-foreground">{profile?.name || 'User'}</h1>
-                <CheckCircle2 size={16} className="text-primary" />
-              </div>
-              {(profile as any)?.username && (
-                <p className="text-xs text-primary font-semibold">@{(profile as any).username}</p>
-              )}
-              <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1 mt-1">
-                <MapPin size={12} />
-                {profile?.location || t('locationNotSet')} {profile?.farm_size ? `• ${profile.farm_size}` : ''}
-              </p>
-              <p className="text-xs sm:text-sm text-foreground/80 mt-2">{profile?.bio || '🌾 Passionate farmer using AgroTech 🌱'}</p>
-            </div>
-
-            <div className="flex gap-2">
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => setShowNewPost(true)}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-primary to-emerald text-primary-foreground shadow-lg font-semibold text-sm flex items-center justify-center gap-1">
-                <Plus size={16} /> {t('newPost')}
-              </motion.button>
-              <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/messages')}
-                className="flex-1 py-2.5 rounded-xl font-semibold text-sm clay-card">{t('messages')}</motion.button>
-              <motion.button whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="w-11 h-11 rounded-xl clay-card flex items-center justify-center"><Share2 size={18} /></motion.button>
-            </div>
-
-            {profile?.primary_crops && profile.primary_crops.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-border">
-                <div className="flex gap-2 flex-wrap">
-                  {profile.primary_crops.map((crop, index) => (
-                    <motion.span key={crop} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }}
-                      className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold border border-primary/20">
-                      🌾 {crop}
-                    </motion.span>
-                  ))}
+        {/* --- HEADER (Avatar & Stats) --- */}
+        <div className="px-4 pt-6 pb-4">
+          <div className="flex items-center justify-between">
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border border-border p-1">
+                <div className="w-full h-full rounded-full bg-muted overflow-hidden flex items-center justify-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                  {uploading ? (
+                    <Loader2 size={24} className="animate-spin text-muted-foreground" />
+                  ) : profile?.avatar_url ? (
+                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-2xl sm:text-4xl font-bold text-muted-foreground">{profile?.name?.charAt(0).toUpperCase() || '?'}</span>
+                  )}
                 </div>
+              </div>
+              <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 bg-primary text-primary-foreground rounded-full p-1.5 border-2 border-background shadow-sm">
+                <Plus size={14} className="sm:w-4 sm:h-4" />
+              </button>
+            </div>
+
+            <div className="flex flex-1 justify-center gap-6 sm:gap-10">
+              <div className="flex flex-col items-center">
+                <span className="font-bold text-lg sm:text-xl text-foreground">{posts.length}</span>
+                <span className="text-[11px] sm:text-xs text-muted-foreground">{t('posts') || 'Posts'}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-bold text-lg sm:text-xl text-foreground">{followCounts.followers}</span>
+                <span className="text-[11px] sm:text-xs text-muted-foreground">{t('followers') || 'Followers'}</span>
+              </div>
+              <div className="flex flex-col items-center">
+                <span className="font-bold text-lg sm:text-xl text-foreground">{followCounts.following}</span>
+                <span className="text-[11px] sm:text-xs text-muted-foreground">{t('following') || 'Following'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 sm:mt-5 space-y-1">
+            <h1 className="font-bold text-sm sm:text-base text-foreground">{profile?.name || 'AgroTech Farmer'}</h1>
+            <p className="text-sm text-foreground/90 whitespace-pre-wrap">{profile?.bio || 'Passionate farmer building the future of agriculture. 🌱'}</p>
+            
+            {/* Clean Neutral Badges */}
+            <div className="flex flex-wrap gap-2 mt-2 pt-1 text-[11px] sm:text-xs text-foreground font-medium">
+              {profile?.location && (
+                <span className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-md"><MapPin size={12} /> {profile.location}</span>
+              )}
+              {profile?.farm_size && (
+                <span className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-md">• {profile.farm_size}</span>
+              )}
+            </div>
+            {profile?.primary_crops && profile.primary_crops.length > 0 && (
+              <div className="flex items-center gap-1 mt-1.5 text-[11px] sm:text-xs text-secondary-foreground bg-secondary px-2 py-1 rounded-md font-medium w-fit">
+                <Sprout size={12} /> {profile.primary_crops.join(', ')}
               </div>
             )}
           </div>
-        </ClayCard>
 
-        {/* New Post Modal */}
+          {/* Action Buttons */}
+          <div className="flex gap-2 mt-5">
+            <button onClick={() => setShowEditProfile(true)} className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-colors">
+              {t('editProfile') || 'Edit Profile'}
+            </button>
+            <button onClick={handleShareProfile} className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-colors">
+              {t('shareProfile') || 'Share Profile'}
+            </button>
+          </div>
+        </div>
+
+        {/* --- LANGUAGE MODAL --- */}
         <AnimatePresence>
-          {showNewPost && (
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}>
-              <ClayCard className="border-2 border-primary/20">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-bold text-sm">{t('newPost')}</h3>
-                  <button onClick={() => { setShowNewPost(false); setNewPostPreview(null); setNewPostImage(null); }}><X size={18} className="text-muted-foreground" /></button>
+          {showLanguage && (
+            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
+              <ClayCard className="w-full max-w-sm border border-border shadow-2xl p-5">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
+                  <h3 className="font-bold text-lg text-foreground flex items-center gap-2"><Globe size={20}/> {t('language') || 'Language'}</h3>
+                  <button onClick={() => setShowLanguage(false)} className="p-1.5 hover:bg-muted rounded-full transition"><X size={20} className="text-muted-foreground" /></button>
                 </div>
-                {newPostPreview && (
-                  newPostMediaType === 'video' ? (
-                    <video src={newPostPreview} controls className="w-full aspect-square object-cover rounded-xl mb-3" />
-                  ) : (
-                    <img src={newPostPreview} alt="Preview" className="w-full aspect-square object-cover rounded-xl mb-3" />
-                  )
-                )}
-                <Textarea placeholder={t('addCaption')} value={newPostCaption} onChange={(e) => setNewPostCaption(e.target.value)} className="clay-inset border-0 mb-3" rows={2} />
-                <div className="flex gap-2">
-                  <ClayButton onClick={() => postImageRef.current?.click()} variant="secondary" className="flex items-center gap-1 text-xs">
-                    <ImagePlus size={16} /> {t('selectImage')}
-                  </ClayButton>
-                  <ClayButton onClick={createPost} variant="primary" className="flex-1 flex items-center justify-center gap-1 text-xs" disabled={postingNew}>
-                    {postingNew ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-                    {postingNew ? t('posting') : t('newPost')}
-                  </ClayButton>
+                <div className="grid grid-cols-2 gap-3">
+                  {languages.map((lang) => (
+                    <button key={lang.code} onClick={() => { setLanguage(lang.code); setShowLanguage(false); }} className={`py-3 rounded-lg text-sm font-medium transition-all ${language === lang.code ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}>
+                      {lang.label}
+                    </button>
+                  ))}
                 </div>
               </ClayCard>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Tabs */}
-        <div className="flex rounded-2xl clay-card p-1">
-          {([
-            { key: 'posts' as TabType, icon: Grid3X3, label: t('posts') },
-            { key: 'saved' as TabType, icon: Bookmark, label: t('saved') },
-          ]).map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <motion.button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 font-medium text-sm transition-all ${activeTab === tab.key ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'}`}
-                whileTap={{ scale: 0.95 }}>
-                <Icon size={18} />
-                <span>{tab.label}</span>
-              </motion.button>
-            );
-          })}
-        </div>
+        {/* --- EDIT PROFILE MODAL --- */}
+        <AnimatePresence>
+          {showEditProfile && (
+            <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
+              <ClayCard className="w-full max-w-md border border-border shadow-2xl overflow-y-auto max-h-[90vh] p-5">
+                <div className="flex items-center justify-between mb-6 pb-3 border-b border-border/50">
+                  <h3 className="font-bold text-lg text-foreground">{t('editProfile') || 'Edit Profile'}</h3>
+                  <button onClick={() => setShowEditProfile(false)} className="p-1.5 hover:bg-muted rounded-full transition"><X size={20} className="text-muted-foreground" /></button>
+                </div>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Full Name</label>
+                    <Input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} placeholder="Your Name" className="mt-1 bg-background border-border text-foreground" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Username</label>
+                    <Input value={editForm.username} onChange={(e) => setEditForm({...editForm, username: e.target.value})} placeholder="Username" className="mt-1 bg-background border-border text-foreground" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Bio</label>
+                    <Textarea value={editForm.bio} onChange={(e) => setEditForm({...editForm, bio: e.target.value})} placeholder="Write a short bio..." className="mt-1 resize-none bg-background border-border text-foreground" rows={3} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground ml-1">Location</label>
+                      <Input value={editForm.location} onChange={(e) => setEditForm({...editForm, location: e.target.value})} placeholder="E.g. Punjab, India" className="mt-1 bg-background border-border text-foreground" />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-muted-foreground ml-1">Farm Size</label>
+                      <Input value={editForm.farm_size} onChange={(e) => setEditForm({...editForm, farm_size: e.target.value})} placeholder="E.g. 5 Acres" className="mt-1 bg-background border-border text-foreground" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground ml-1">Primary Crops (Comma separated)</label>
+                    <Input value={editForm.primary_crops} onChange={(e) => setEditForm({...editForm, primary_crops: e.target.value})} placeholder="Wheat, Sugarcane, Rice" className="mt-1 bg-background border-border text-foreground" />
+                  </div>
+                </div>
 
-        {/* Tab Content */}
-        <AnimatePresence mode="wait">
-          {activeTab === 'posts' && (
-            <motion.div key="posts" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {posts.length === 0 ? (
-                <div className="text-center py-12">
-                  <Image size={48} className="mx-auto text-muted-foreground/30 mb-4" />
-                  <p className="text-muted-foreground text-sm">{t('noPostsYet')}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">{t('shareJourney')}</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                  {posts.map((post, index) => (
-                    <motion.div key={post.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }}
-                      whileHover={{ scale: 1.02 }} className="relative aspect-square rounded-xl sm:rounded-2xl overflow-hidden cursor-pointer group">
-                      {(post as any).media_type === 'video' && post.image_url ? (
-                        <video src={post.image_url} autoPlay loop muted playsInline className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                      ) : post.image_url ? (
-                        <img src={post.image_url} alt={post.caption || 'Post'} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                      ) : (
-                        <div className="w-full h-full bg-primary/5 flex items-center justify-center p-2">
-                          <p className="text-xs text-muted-foreground text-center line-clamp-4">{post.caption}</p>
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/40 transition-all duration-300 flex items-center justify-center">
-                        <div className="flex items-center gap-1 text-primary-foreground font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Heart size={18} fill="currentColor" /><span>{post.likes}</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {activeTab === 'saved' && (
-            <motion.div key="saved" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-              {savedPosts.length === 0 ? (
-                <div className="text-center py-12">
-                  <Bookmark size={48} className="mx-auto text-muted-foreground/30 mb-4" />
-                  <p className="text-muted-foreground text-sm">{t('noSavedItems')}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">{t('saveTip')}</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                  {savedPosts.map((saved: any, index: number) => (
-                    <motion.div key={saved.id} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.05 }}
-                      className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group">
-                      {saved.posts?.media_type === 'video' && saved.posts?.image_url ? (
-                          <video src={saved.posts.image_url} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                      ) : saved.posts?.image_url && (
-                          <img src={saved.posts.image_url} alt="" className="w-full h-full object-cover" />
-                      )}
-                    </motion.div>
-                  ))}
-                </div>
-              )}
+                <button onClick={handleSaveProfile} disabled={updatingProfile} className="w-full mt-6 py-3 bg-primary text-primary-foreground rounded-lg font-bold text-sm flex items-center justify-center gap-2 hover:opacity-90 transition disabled:opacity-50">
+                  {updatingProfile ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                  {updatingProfile ? 'Saving...' : 'Save Profile'}
+                </button>
+              </ClayCard>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Settings */}
-        <ClayCard>
-          <div className="flex items-center gap-3 mb-4"><Settings size={18} className="text-muted-foreground" /><h3 className="font-bold text-sm">{t('settings')}</h3></div>
-          <p className="text-xs text-muted-foreground mb-2">{t('language')}</p>
-          <div className="grid grid-cols-4 gap-2 mb-4">
-            {languages.map((lang) => (
-              <motion.button key={lang.code} onClick={() => setLanguage(lang.code)} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                className={`py-2.5 rounded-xl text-xs font-medium transition-all ${language === lang.code ? 'bg-primary/10 text-primary border border-primary/30' : 'clay-card text-muted-foreground hover:text-foreground'}`}>
-                {lang.label}
-              </motion.button>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 py-3 rounded-xl clay-card flex items-center justify-center gap-2 text-sm font-medium">
-              <Edit3 size={16} /> {t('editProfile')}
-            </motion.button>
-            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => navigate('/subscription')}
-              className="flex-1 py-3 rounded-xl bg-accent/15 flex items-center justify-center gap-2 text-sm font-medium text-accent-foreground">
-              <Crown size={16} /> {t('upgradePro')}
-            </motion.button>
-          </div>
-        </ClayCard>
+        {/* --- NEW POST MODAL --- */}
+        <AnimatePresence>
+          {showNewPost && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
+              <ClayCard className="w-full max-w-md border border-border shadow-2xl overflow-y-auto max-h-[90vh]">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
+                  <h3 className="font-bold text-base text-foreground">{t('newPost') || 'Create New Post'}</h3>
+                  <button onClick={resetNewPost} className="p-1 hover:bg-muted rounded-full"><X size={20} className="text-muted-foreground" /></button>
+                </div>
+                
+                {newPostPreviews.length > 0 ? (
+                  <div className="flex overflow-x-auto gap-2 snap-x mb-4 pb-2 hide-scrollbar">
+                    {newPostPreviews.map((preview, idx) => (
+                      <div key={idx} className="relative w-full aspect-square shrink-0 snap-center bg-black rounded-lg overflow-hidden border border-border">
+                        {newPostMediaType === 'video' ? (
+                          <video src={preview} controls className="w-full h-full object-contain" />
+                        ) : (
+                          <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+                        )}
+                        <div className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full font-bold">
+                          {idx + 1}/{newPostPreviews.length}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div onClick={() => postImageRef.current?.click()} className="w-full aspect-video bg-muted border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-2 mb-4 cursor-pointer hover:bg-muted/80 transition">
+                    <UploadCloud size={32} className="text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground text-center">
+                      {t('uploadMedia') || 'Upload Photos or Video'}<br/>
+                      <span className="text-xs text-muted-foreground font-normal">(Select multiple photos allowed)</span>
+                    </span>
+                  </div>
+                )}
 
-        {/* Logout */}
-        <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} onClick={handleLogout}
-          className="w-full py-4 rounded-2xl clay-card flex items-center justify-center gap-2 text-destructive font-semibold">
-          <LogOut size={18} /> {t('logout')}
-        </motion.button>
+                <div className="mb-4">
+                  {newPostAudioPreview ? (
+                    <div className="flex flex-col gap-2 p-3 bg-secondary/50 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold flex items-center gap-2 text-foreground"><Music size={14} className="text-muted-foreground" /> {newPostAudio?.name}</span>
+                        <button onClick={() => { setNewPostAudio(null); setNewPostAudioPreview(null); }} className="text-destructive"><X size={16} /></button>
+                      </div>
+                      <audio src={newPostAudioPreview} controls className="w-full h-8" />
+                    </div>
+                  ) : (
+                    <button onClick={() => postAudioRef.current?.click()} className="w-full py-2 border border-border border-dashed rounded-lg flex items-center justify-center gap-2 text-sm font-medium text-muted-foreground hover:bg-muted transition">
+                      <Music size={16} /> Add Music / Audio
+                    </button>
+                  )}
+                </div>
 
-        <div className="text-center py-4">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <img src={logoImg} alt="AgroTech" className="w-5 h-5" />
-            <span className="font-bold text-sm">AgroTech</span>
+                <Textarea placeholder={t('addCaption') || 'Write a caption...'} value={newPostCaption} onChange={(e) => setNewPostCaption(e.target.value)} className="bg-background border border-border resize-none text-sm mb-4 focus-visible:ring-1 focus-visible:ring-primary text-foreground" rows={3} />
+                
+                <button onClick={createPost} disabled={postingNew || (!newPostMediaFiles.length && !newPostCaption)} className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition">
+                  {postingNew ? <Loader2 size={16} className="animate-spin" /> : <PlusSquare size={16} />}
+                  {postingNew ? t('posting') || 'Sharing...' : t('share') || 'Share Post'}
+                </button>
+              </ClayCard>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* --- TABS SYSTEM --- */}
+        <div className="mt-2 border-t border-border">
+          <div className="flex w-full">
+            <button onClick={() => setActiveTab('posts')} className={`flex-1 py-3 flex items-center justify-center gap-2 transition-colors relative text-sm uppercase tracking-widest font-semibold ${activeTab === 'posts' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <Grid3X3 size={16} /> <span className="hidden sm:inline">{t('posts') || 'POSTS'}</span>
+              {activeTab === 'posts' && <motion.div layoutId="ig-tab" className="absolute top-0 left-0 right-0 h-[2px] bg-foreground" />}
+            </button>
+            <button onClick={() => setActiveTab('saved')} className={`flex-1 py-3 flex items-center justify-center gap-2 transition-colors relative text-sm uppercase tracking-widest font-semibold ${activeTab === 'saved' ? 'text-foreground' : 'text-muted-foreground'}`}>
+              <Bookmark size={16} /> <span className="hidden sm:inline">{t('saved') || 'SAVED'}</span>
+              {activeTab === 'saved' && <motion.div layoutId="ig-tab" className="absolute top-0 left-0 right-0 h-[2px] bg-foreground" />}
+            </button>
           </div>
-          <p className="text-[10px] text-muted-foreground">Version 2.0.0 • Made with 💚 in India</p>
         </div>
-      </motion.div>
+
+        {/* --- CONTENT GRIDS --- */}
+        <div className="pb-8">
+          <AnimatePresence mode="wait">
+            {activeTab === 'posts' && (
+              <motion.div key="posts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {posts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+                    <div className="w-16 h-16 rounded-full border-2 border-border text-muted-foreground flex items-center justify-center mb-4"><Camera size={28} /></div>
+                    <h2 className="text-xl font-bold mb-2 text-foreground">{t('noPostsYet') || 'No Posts Yet'}</h2>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-0.5 sm:gap-1">
+                    {posts.map((post) => (
+                      <div key={post.id} className="aspect-square bg-muted relative group cursor-pointer overflow-hidden">
+                        {(post as any).media_type === 'video' && post.image_url ? (
+                          <video src={post.image_url} className="w-full h-full object-cover" />
+                        ) : post.image_url ? (
+                          <img src={post.image_url} alt="Post" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center p-2"><p className="text-[10px] text-center line-clamp-3 text-muted-foreground">{post.caption}</p></div>
+                        )}
+                        
+                        {post.media_urls && post.media_urls.length > 1 && (
+                          <div className="absolute top-2 right-2 drop-shadow-md text-white">
+                            <Layers size={16} className="fill-current/80" />
+                          </div>
+                        )}
+                        
+                        {post.audio_url && (
+                          <div className="absolute bottom-2 left-2 drop-shadow-md text-white bg-black/40 p-1 rounded-full backdrop-blur-sm">
+                            <Music size={12} />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === 'saved' && (
+              <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {savedPosts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+                    <div className="w-16 h-16 rounded-full border-2 border-border text-muted-foreground flex items-center justify-center mb-4"><Bookmark size={28} /></div>
+                    <h2 className="text-xl font-bold mb-2 text-foreground">Saved Shorts</h2>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 gap-0.5 sm:gap-1">
+                    {savedPosts.map((saved: any) => (
+                      <div key={saved.id} className="aspect-square bg-muted relative group cursor-pointer overflow-hidden">
+                        {saved.posts?.media_type === 'video' && saved.posts?.image_url ? (
+                            <video src={saved.posts.image_url} className="w-full h-full object-cover" />
+                        ) : saved.posts?.image_url && (
+                            <img src={saved.posts.image_url} alt="Saved" className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+      </div>
     </AppLayout>
   );
 };

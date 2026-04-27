@@ -15,8 +15,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, showNav = true }
     return (
       <div className="min-h-screen bg-background relative overflow-x-hidden">
         <BackgroundEffects />
-        <main className="relative z-10">
-          <div className="container max-w-4xl mx-auto px-3 sm:px-4">
+        <main className="relative z-10 flex-1 pb-20 lg:pb-8 pt-16 lg:pt-4">
+          <div className="max-w-7xl mx-auto h-full px-2 sm:px-4 lg:px-8 animate-fade-in">
             {children}
           </div>
         </main>
