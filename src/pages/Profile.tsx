@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  MapPin, LogOut, Crown, Camera, Grid3X3, Bookmark, Heart, 
+  MapPin, LogOut, Crown, Camera, Grid3X3, Bookmark, 
   Plus, CheckCircle2, Share2, Loader2, X, 
-  UploadCloud, Sprout, PlusSquare, Music, Layers, Globe
+  UploadCloud, Sprout, PlusSquare, Music, Layers, UserPlus, Check, User
 } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ClayCard } from '@/components/ui/ClayCard';
@@ -18,26 +18,35 @@ import { toast } from 'sonner';
 type TabType = 'posts' | 'saved';
 
 const Profile: React.FC = () => {
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, profile, logout, uploadAvatar, isAuthenticated, refreshProfile } = useAuth();
   const navigate = useNavigate();
   
-  // States
+  const { id: routeId } = useParams();
+  const isOwnProfile = !routeId || routeId === user?.id;
+  const targetUserId = routeId || user?.id;
+
   const [activeTab, setActiveTab] = useState<TabType>('posts');
   const [posts, setPosts] = useState<any[]>([]);
   const [savedPosts, setSavedPosts] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
-  const [showLanguage, setShowLanguage] = useState(false);
   
-  // Edit Profile States
+  const [displayProfile, setDisplayProfile] = useState<any>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // Network Modal States (Followers / Following List)
+  const [showNetworkModal, setShowNetworkModal] = useState<'followers' | 'following' | null>(null);
+  const [networkList, setNetworkList] = useState<any[]>([]);
+  const [isLoadingNetwork, setIsLoadingNetwork] = useState(false);
+
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '', username: '', bio: '', location: '', farm_size: '', primary_crops: ''
   });
 
-  // New Post States
   const [showNewPost, setShowNewPost] = useState(false);
   const [newPostCaption, setNewPostCaption] = useState('');
   const [newPostMediaFiles, setNewPostMediaFiles] = useState<File[]>([]);
@@ -47,63 +56,122 @@ const Profile: React.FC = () => {
   const [newPostAudioPreview, setNewPostAudioPreview] = useState<string | null>(null);
   const [postingNew, setPostingNew] = useState(false);
   
-  // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const postImageRef = useRef<HTMLInputElement>(null);
   const postAudioRef = useRef<HTMLInputElement>(null);
 
-  const languages = [
-    { code: 'en' as const, label: 'English' },
-    { code: 'hi' as const, label: 'हिंदी' },
-    { code: 'pa' as const, label: 'ਪੰਜਾਬੀ' },
-    { code: 'gu' as const, label: 'ગુજરાતી' },
-  ];
-
   useEffect(() => {
     if (!isAuthenticated) { navigate('/login'); return; }
-    fetchPosts();
-    fetchFollowCounts();
-    fetchSavedPosts();
-  }, [isAuthenticated]);
+    if (!targetUserId) return;
+
+    const loadProfileData = async () => {
+      setIsLoadingProfile(true);
+      try {
+        if (isOwnProfile) {
+          setDisplayProfile(profile);
+        } else {
+          const { data } = await (supabase as any).from('profiles').select('*').eq('user_id', targetUserId).single();
+          setDisplayProfile(data);
+          
+          if (user) {
+            const { data: followData } = await (supabase as any).from('follows')
+              .select('*').eq('follower_id', user.id).eq('following_id', targetUserId).single();
+            setIsFollowing(!!followData);
+          }
+        }
+
+        const { data: postsData } = await (supabase as any).from('posts').select('*').eq('user_id', targetUserId).order('created_at', { ascending: false });
+        if (postsData) setPosts(postsData);
+
+        try {
+          const { data: countsData } = await (supabase as any).rpc('get_follow_counts', { _user_id: targetUserId });
+          if (countsData && countsData[0]) setFollowCounts({ followers: Number(countsData[0].followers_count), following: Number(countsData[0].following_count) });
+        } catch (e) { console.log('Followers table not ready'); }
+
+        if (isOwnProfile) {
+          const { data: savedData } = await (supabase as any).from('saved_posts').select('*, posts(*)').eq('user_id', targetUserId).order('created_at', { ascending: false });
+          if (savedData) setSavedPosts(savedData);
+        }
+
+      } catch (error) {
+        console.error('Error loading profile:', error);
+        toast.error("Profile not found");
+        navigate('/profile'); 
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+
+    loadProfileData();
+  }, [isAuthenticated, targetUserId, isOwnProfile, profile]);
 
   useEffect(() => {
     if (showEditProfile && profile) {
       setEditForm({
-        name: profile.name || '',
-        username: (profile as any).username || '',
-        bio: profile.bio || '',
-        location: profile.location || '',
-        farm_size: profile.farm_size || '',
-        primary_crops: profile.primary_crops ? profile.primary_crops.join(', ') : ''
+        name: profile.name || '', username: (profile as any).username || '',
+        bio: profile.bio || '', location: profile.location || '',
+        farm_size: profile.farm_size || '', primary_crops: profile.primary_crops ? profile.primary_crops.join(', ') : ''
       });
     }
   }, [showEditProfile, profile]);
 
-  const fetchPosts = async () => {
-    if (!user) return;
-    const { data } = await (supabase as any).from('posts').select('*').eq('user_id', user.id).order('created_at', { ascending: false });
-    if (data) setPosts(data);
-  };
+  const handleLogout = async () => { await logout(); navigate('/login'); };
 
-  const fetchFollowCounts = async () => {
-    if (!user) return;
+  const toggleFollow = async () => {
+    if (!user || isOwnProfile) return;
     try {
-      const { data } = await (supabase as any).rpc('get_follow_counts', { _user_id: user.id });
-      if (data && data[0]) setFollowCounts({ followers: Number(data[0].followers_count), following: Number(data[0].following_count) });
-    } catch (e) {
-      console.log('Followers table not ready yet');
+      if (isFollowing) {
+        await (supabase as any).from('follows').delete().eq('follower_id', user.id).eq('following_id', targetUserId);
+        setIsFollowing(false);
+        setFollowCounts(prev => ({...prev, followers: Math.max(0, prev.followers - 1)}));
+        toast.success(`Unfollowed ${displayProfile?.name}`);
+      } else {
+        await (supabase as any).from('follows').insert([{ follower_id: user.id, following_id: targetUserId }]);
+        setIsFollowing(true);
+        setFollowCounts(prev => ({...prev, followers: prev.followers + 1}));
+        toast.success(`Following ${displayProfile?.name}`);
+      }
+    } catch (error) {
+      toast.error('Failed to update follow status');
     }
   };
 
-  const fetchSavedPosts = async () => {
-    if (!user) return;
-    const { data } = await (supabase as any).from('saved_posts').select('*, posts(*)').eq('user_id', user.id).order('created_at', { ascending: false });
-    if (data) setSavedPosts(data);
+  const openNetworkModal = async (type: 'followers' | 'following') => {
+    setShowNetworkModal(type);
+    setIsLoadingNetwork(true);
+    setNetworkList([]);
+    
+    try {
+      const columnToMatch = type === 'followers' ? 'following_id' : 'follower_id';
+      const columnToSelect = type === 'followers' ? 'follower_id' : 'following_id';
+      
+      const { data: followsData, error: followsError } = await (supabase as any)
+        .from('follows')
+        .select(columnToSelect)
+        .eq(columnToMatch, targetUserId);
+        
+      if (followsError) throw followsError;
+      
+      if (followsData && followsData.length > 0) {
+        const ids = followsData.map((f: any) => f[columnToSelect]);
+        const { data: profilesData, error: profilesError } = await (supabase as any)
+          .from('profiles')
+          .select('user_id, name, username, avatar_url')
+          .in('user_id', ids); 
+          
+        if (profilesError) throw profilesError;
+        if (profilesData) setNetworkList(profilesData);
+      }
+    } catch (err) {
+      console.error('Error fetching network:', err);
+      toast.error(`Failed to load ${type} list`);
+    } finally {
+      setIsLoadingNetwork(false);
+    }
   };
 
-  const handleLogout = async () => { await logout(); navigate('/login'); };
-
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isOwnProfile) return;
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -172,7 +240,7 @@ const Profile: React.FC = () => {
       });
 
       resetNewPost();
-      fetchPosts();
+      window.location.reload(); 
       toast.success(t('postedSuccessfully') || 'Post created successfully!');
     } catch (error) {
       toast.error('Failed to upload post');
@@ -185,13 +253,11 @@ const Profile: React.FC = () => {
     if (!user) return;
     setUpdatingProfile(true);
     try {
-      const cropsArray = editForm.primary_crops
-        ? editForm.primary_crops.split(',').map(c => c.trim()).filter(Boolean)
-        : [];
-      const { error } = await (supabase as any).from('profiles').update({
-        name: editForm.name, username: editForm.username, bio: editForm.bio,
+      const cropsArray = editForm.primary_crops ? editForm.primary_crops.split(',').map(c => c.trim()).filter(Boolean) : [];
+      const { error } = await (supabase as any).from('profiles').upsert({
+        user_id: user.id, name: editForm.name, username: editForm.username, bio: editForm.bio,
         location: editForm.location, farm_size: editForm.farm_size, primary_crops: cropsArray
-      }).eq('id', user.id);
+      }, { onConflict: 'user_id' });
 
       if (error) throw error;
       toast.success('Profile updated successfully!');
@@ -207,55 +273,83 @@ const Profile: React.FC = () => {
   };
 
   const handleShareProfile = async () => {
-    const url = `${window.location.origin}/profile/${(profile as any)?.username || user?.id}`;
+    const url = `${window.location.origin}/profile/${targetUserId}`;
+    const shareData = {
+      title: `${displayProfile?.name || 'AgroTech Farmer'}'s Profile`,
+      text: `Check out ${displayProfile?.name || 'this farmer'}'s profile and shorts on AgroTech! 🌱`,
+      url: url,
+    };
+
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success(t('linkCopied') || 'Profile link copied!');
-    } catch (err) {
-      toast.error('Failed to copy link');
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Profile link copied to clipboard!');
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        console.error('Error sharing profile:', err);
+        toast.error('Failed to share profile');
+      }
     }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <AppLayout>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <Loader2 className="animate-spin text-primary" size={40} />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
       <div className="w-full max-w-2xl mx-auto bg-background min-h-screen pb-20">
         
-        {/* Hidden Inputs */}
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
-        <input ref={postImageRef} type="file" accept="image/*,video/*" multiple onChange={handleNewPostMedia} className="hidden" />
-        <input ref={postAudioRef} type="file" accept="audio/*" onChange={handleNewPostAudio} className="hidden" />
+        {isOwnProfile && (
+          <>
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} className="hidden" />
+            <input ref={postImageRef} type="file" accept="image/*,video/*" multiple onChange={handleNewPostMedia} className="hidden" />
+            <input ref={postAudioRef} type="file" accept="audio/*" onChange={handleNewPostAudio} className="hidden" />
+          </>
+        )}
 
-        {/* --- TOP NAVIGATION (Clean, Icons Only) --- */}
         <div className="flex items-center justify-between px-4 py-3 sticky top-0 bg-background/95 backdrop-blur-md z-30 border-b border-border/40">
           <div className="flex items-center gap-1.5 font-bold text-lg sm:text-xl text-foreground">
-            @{(profile as any)?.username || 'farmer_' + user?.id.substring(0, 5)}
-            <Crown size={16} className="text-amber-500" />
+            @{displayProfile?.username || 'farmer_' + targetUserId.substring(0, 5)}
+            {isOwnProfile && <Crown size={16} className="text-amber-500" />}
           </div>
-          <div className="flex items-center gap-4 text-foreground">
-            <button onClick={() => setShowNewPost(true)} className="hover:opacity-70 transition"><PlusSquare size={24} /></button>
-            <button onClick={() => setShowLanguage(true)} className="hover:opacity-70 transition"><Globe size={24} /></button>
-            <button onClick={handleLogout} className="hover:text-destructive transition"><LogOut size={24} /></button>
-          </div>
+          
+          {isOwnProfile && (
+            <div className="flex items-center gap-4 text-foreground">
+              <button onClick={() => setShowNewPost(true)} className="hover:opacity-70 transition"><PlusSquare size={24} /></button>
+              <button onClick={handleLogout} className="hover:text-destructive transition"><LogOut size={24} /></button>
+            </div>
+          )}
         </div>
 
-        {/* --- HEADER (Avatar & Stats) --- */}
         <div className="px-4 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div className="relative shrink-0">
               <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border border-border p-1">
-                <div className="w-full h-full rounded-full bg-muted overflow-hidden flex items-center justify-center cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                <div className={`w-full h-full rounded-full bg-muted overflow-hidden flex items-center justify-center ${isOwnProfile ? 'cursor-pointer' : ''}`} onClick={() => isOwnProfile && fileInputRef.current?.click()}>
                   {uploading ? (
                     <Loader2 size={24} className="animate-spin text-muted-foreground" />
-                  ) : profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : displayProfile?.avatar_url ? (
+                    <img src={displayProfile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
-                    <span className="text-2xl sm:text-4xl font-bold text-muted-foreground">{profile?.name?.charAt(0).toUpperCase() || '?'}</span>
+                    <span className="text-2xl sm:text-4xl font-bold text-muted-foreground">{displayProfile?.name?.charAt(0).toUpperCase() || '?'}</span>
                   )}
                 </div>
               </div>
-              <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 bg-primary text-primary-foreground rounded-full p-1.5 border-2 border-background shadow-sm">
-                <Plus size={14} className="sm:w-4 sm:h-4" />
-              </button>
+              {isOwnProfile && (
+                <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 sm:bottom-1 sm:right-1 bg-primary text-primary-foreground rounded-full p-1.5 border-2 border-background shadow-sm">
+                  <Plus size={14} className="sm:w-4 sm:h-4" />
+                </button>
+              )}
             </div>
 
             <div className="flex flex-1 justify-center gap-6 sm:gap-10">
@@ -263,11 +357,13 @@ const Profile: React.FC = () => {
                 <span className="font-bold text-lg sm:text-xl text-foreground">{posts.length}</span>
                 <span className="text-[11px] sm:text-xs text-muted-foreground">{t('posts') || 'Posts'}</span>
               </div>
-              <div className="flex flex-col items-center">
+
+              <div className="flex flex-col items-center cursor-pointer hover:opacity-70 transition-opacity" onClick={() => openNetworkModal('followers')}>
                 <span className="font-bold text-lg sm:text-xl text-foreground">{followCounts.followers}</span>
                 <span className="text-[11px] sm:text-xs text-muted-foreground">{t('followers') || 'Followers'}</span>
               </div>
-              <div className="flex flex-col items-center">
+
+              <div className="flex flex-col items-center cursor-pointer hover:opacity-70 transition-opacity" onClick={() => openNetworkModal('following')}>
                 <span className="font-bold text-lg sm:text-xl text-foreground">{followCounts.following}</span>
                 <span className="text-[11px] sm:text-xs text-muted-foreground">{t('following') || 'Following'}</span>
               </div>
@@ -275,58 +371,92 @@ const Profile: React.FC = () => {
           </div>
 
           <div className="mt-4 sm:mt-5 space-y-1">
-            <h1 className="font-bold text-sm sm:text-base text-foreground">{profile?.name || 'AgroTech Farmer'}</h1>
-            <p className="text-sm text-foreground/90 whitespace-pre-wrap">{profile?.bio || 'Passionate farmer building the future of agriculture. 🌱'}</p>
+            <h1 className="font-bold text-sm sm:text-base text-foreground">{displayProfile?.name || 'AgroTech Farmer'}</h1>
+            <p className="text-sm text-foreground/90 whitespace-pre-wrap">{displayProfile?.bio || 'Passionate farmer building the future of agriculture. 🌱'}</p>
             
-            {/* Clean Neutral Badges */}
-            <div className="flex flex-wrap gap-2 mt-2 pt-1 text-[11px] sm:text-xs text-foreground font-medium">
-              {profile?.location && (
-                <span className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-md"><MapPin size={12} /> {profile.location}</span>
+            {/* 🚀 FIXED: Badges now use pure primary color with 15% opacity! */}
+            <div className="flex flex-wrap gap-2 mt-2 pt-1 text-[11px] sm:text-xs font-medium">
+              {displayProfile?.location && (
+                <span className="flex items-center gap-1 bg-primary/15 text-primary font-bold px-2 py-1 rounded-md"><MapPin size={12} /> {displayProfile.location}</span>
               )}
-              {profile?.farm_size && (
-                <span className="flex items-center gap-1 bg-secondary text-secondary-foreground px-2 py-1 rounded-md">• {profile.farm_size}</span>
+              {displayProfile?.farm_size && (
+                <span className="flex items-center gap-1 bg-primary/15 text-primary font-bold px-2 py-1 rounded-md">• {displayProfile.farm_size}</span>
               )}
             </div>
-            {profile?.primary_crops && profile.primary_crops.length > 0 && (
-              <div className="flex items-center gap-1 mt-1.5 text-[11px] sm:text-xs text-secondary-foreground bg-secondary px-2 py-1 rounded-md font-medium w-fit">
-                <Sprout size={12} /> {profile.primary_crops.join(', ')}
+            {displayProfile?.primary_crops && displayProfile.primary_crops.length > 0 && (
+              <div className="flex items-center gap-1 mt-1.5 text-[11px] sm:text-xs bg-primary/15 text-primary font-bold px-2 py-1 rounded-md w-fit">
+                <Sprout size={12} /> {displayProfile.primary_crops.join(', ')}
               </div>
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* 🚀 FIXED: Buttons now use pure primary colors! */}
           <div className="flex gap-2 mt-5">
-            <button onClick={() => setShowEditProfile(true)} className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-colors">
-              {t('editProfile') || 'Edit Profile'}
-            </button>
-            <button onClick={handleShareProfile} className="flex-1 bg-secondary hover:bg-secondary/80 text-secondary-foreground py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-colors">
+            {isOwnProfile ? (
+              <button onClick={() => setShowEditProfile(true)} className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-colors shadow-sm">
+                {t('editProfile') || 'Edit Profile'}
+              </button>
+            ) : (
+              <button onClick={toggleFollow} className={`flex-1 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-colors flex items-center justify-center gap-1 shadow-sm ${isFollowing ? 'bg-primary/15 text-primary' : 'bg-primary text-primary-foreground hover:bg-primary/90'}`}>
+                {isFollowing ? <Check size={16}/> : <UserPlus size={16}/>} {isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
+            
+            <button onClick={handleShareProfile} className="flex-1 border-2 border-primary text-primary hover:bg-primary/10 py-1.5 sm:py-2 rounded-lg font-semibold text-xs sm:text-sm transition-colors">
               {t('shareProfile') || 'Share Profile'}
             </button>
           </div>
         </div>
 
-        {/* --- LANGUAGE MODAL --- */}
+        {/* Network List Modal */}
         <AnimatePresence>
-          {showLanguage && (
+          {showNetworkModal && (
             <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
-              <ClayCard className="w-full max-w-sm border border-border shadow-2xl p-5">
-                <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50">
-                  <h3 className="font-bold text-lg text-foreground flex items-center gap-2"><Globe size={20}/> {t('language') || 'Language'}</h3>
-                  <button onClick={() => setShowLanguage(false)} className="p-1.5 hover:bg-muted rounded-full transition"><X size={20} className="text-muted-foreground" /></button>
+              <ClayCard className="w-full max-w-sm border border-border shadow-2xl p-5 max-h-[80vh] flex flex-col">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/50 shrink-0">
+                  <h3 className="font-bold text-lg text-foreground capitalize">{showNetworkModal}</h3>
+                  <button onClick={() => setShowNetworkModal(null)} className="p-1.5 hover:bg-muted rounded-full transition"><X size={20} className="text-muted-foreground" /></button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  {languages.map((lang) => (
-                    <button key={lang.code} onClick={() => { setLanguage(lang.code); setShowLanguage(false); }} className={`py-3 rounded-lg text-sm font-medium transition-all ${language === lang.code ? 'bg-primary text-primary-foreground shadow-md' : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'}`}>
-                      {lang.label}
-                    </button>
-                  ))}
+                
+                <div className="overflow-y-auto flex-1 flex flex-col gap-3 min-h-[50px] hide-scrollbar">
+                  {isLoadingNetwork ? (
+                    <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-primary" /></div>
+                  ) : networkList.length > 0 ? (
+                    networkList.map((person) => (
+                      <div 
+                        key={person.user_id} 
+                        onClick={() => { 
+                          setShowNetworkModal(null); 
+                          navigate(`/profile/${person.user_id}`); 
+                        }}
+                        className="flex items-center gap-3 p-2 hover:bg-primary/5 rounded-lg cursor-pointer transition-colors"
+                      >
+                        <div className="w-11 h-11 rounded-full bg-muted overflow-hidden flex items-center justify-center shrink-0 border border-border shadow-sm">
+                          {person.avatar_url ? (
+                            <img src={person.avatar_url} alt={person.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={20} className="text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="text-sm font-bold text-foreground truncate">{person.username || person.name || 'AgroTech User'}</span>
+                          <span className="text-xs text-muted-foreground truncate">{person.name || ''}</span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 flex flex-col items-center justify-center">
+                      <UserPlus size={40} className="text-muted-foreground/30 mb-3" />
+                      <p className="text-muted-foreground text-sm font-medium">No {showNetworkModal} yet.</p>
+                    </div>
+                  )}
                 </div>
               </ClayCard>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* --- EDIT PROFILE MODAL --- */}
+        {/* Edit Profile Modal */}
         <AnimatePresence>
           {showEditProfile && (
             <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
@@ -374,7 +504,7 @@ const Profile: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* --- NEW POST MODAL --- */}
+        {/* New Post Modal */}
         <AnimatePresence>
           {showNewPost && (
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
@@ -411,7 +541,7 @@ const Profile: React.FC = () => {
 
                 <div className="mb-4">
                   {newPostAudioPreview ? (
-                    <div className="flex flex-col gap-2 p-3 bg-secondary/50 rounded-lg">
+                    <div className="flex flex-col gap-2 p-3 bg-primary/5 rounded-lg">
                       <div className="flex items-center justify-between">
                         <span className="text-sm font-semibold flex items-center gap-2 text-foreground"><Music size={14} className="text-muted-foreground" /> {newPostAudio?.name}</span>
                         <button onClick={() => { setNewPostAudio(null); setNewPostAudioPreview(null); }} className="text-destructive"><X size={16} /></button>
@@ -436,21 +566,21 @@ const Profile: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* --- TABS SYSTEM --- */}
         <div className="mt-2 border-t border-border">
           <div className="flex w-full">
             <button onClick={() => setActiveTab('posts')} className={`flex-1 py-3 flex items-center justify-center gap-2 transition-colors relative text-sm uppercase tracking-widest font-semibold ${activeTab === 'posts' ? 'text-foreground' : 'text-muted-foreground'}`}>
               <Grid3X3 size={16} /> <span className="hidden sm:inline">{t('posts') || 'POSTS'}</span>
               {activeTab === 'posts' && <motion.div layoutId="ig-tab" className="absolute top-0 left-0 right-0 h-[2px] bg-foreground" />}
             </button>
-            <button onClick={() => setActiveTab('saved')} className={`flex-1 py-3 flex items-center justify-center gap-2 transition-colors relative text-sm uppercase tracking-widest font-semibold ${activeTab === 'saved' ? 'text-foreground' : 'text-muted-foreground'}`}>
-              <Bookmark size={16} /> <span className="hidden sm:inline">{t('saved') || 'SAVED'}</span>
-              {activeTab === 'saved' && <motion.div layoutId="ig-tab" className="absolute top-0 left-0 right-0 h-[2px] bg-foreground" />}
-            </button>
+            {isOwnProfile && (
+              <button onClick={() => setActiveTab('saved')} className={`flex-1 py-3 flex items-center justify-center gap-2 transition-colors relative text-sm uppercase tracking-widest font-semibold ${activeTab === 'saved' ? 'text-foreground' : 'text-muted-foreground'}`}>
+                <Bookmark size={16} /> <span className="hidden sm:inline">{t('saved') || 'SAVED'}</span>
+                {activeTab === 'saved' && <motion.div layoutId="ig-tab" className="absolute top-0 left-0 right-0 h-[2px] bg-foreground" />}
+              </button>
+            )}
           </div>
         </div>
 
-        {/* --- CONTENT GRIDS --- */}
         <div className="pb-8">
           <AnimatePresence mode="wait">
             {activeTab === 'posts' && (
@@ -463,7 +593,11 @@ const Profile: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-3 gap-0.5 sm:gap-1">
                     {posts.map((post) => (
-                      <div key={post.id} className="aspect-square bg-muted relative group cursor-pointer overflow-hidden">
+                      <div 
+                        key={post.id} 
+                        onClick={() => navigate(`/reels/${post.id}`)}
+                        className="aspect-square bg-muted relative group cursor-pointer overflow-hidden hover:opacity-90 transition-opacity"
+                      >
                         {(post as any).media_type === 'video' && post.image_url ? (
                           <video src={post.image_url} className="w-full h-full object-cover" />
                         ) : post.image_url ? (
@@ -490,7 +624,7 @@ const Profile: React.FC = () => {
               </motion.div>
             )}
 
-            {activeTab === 'saved' && (
+            {isOwnProfile && activeTab === 'saved' && (
               <motion.div key="saved" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 {savedPosts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-20 text-center px-4">
@@ -500,7 +634,11 @@ const Profile: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-3 gap-0.5 sm:gap-1">
                     {savedPosts.map((saved: any) => (
-                      <div key={saved.id} className="aspect-square bg-muted relative group cursor-pointer overflow-hidden">
+                      <div 
+                        key={saved.id} 
+                        onClick={() => navigate(`/reels/${saved.post_id || saved.posts?.id}`)}
+                        className="aspect-square bg-muted relative group cursor-pointer overflow-hidden hover:opacity-90 transition-opacity"
+                      >
                         {saved.posts?.media_type === 'video' && saved.posts?.image_url ? (
                             <video src={saved.posts.image_url} className="w-full h-full object-cover" />
                         ) : saved.posts?.image_url && (

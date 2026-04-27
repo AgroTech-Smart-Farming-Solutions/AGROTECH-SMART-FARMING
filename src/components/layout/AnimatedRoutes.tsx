@@ -120,6 +120,7 @@ export const AnimatedRoutes: React.FC = () => {
             <Route path="/reels/:id" element={<ProtectedRoute><PageWrapper><AgriShorts /></PageWrapper></ProtectedRoute>} />
             {/* -------------------------- */}
             <Route path="/profile" element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
+            <Route path="/profile/:id" element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
             <Route path="/subscription" element={<ProtectedRoute><PageWrapper><Subscription /></PageWrapper></ProtectedRoute>} />
             <Route path="*" element={<PageWrapper><NotFound /></PageWrapper>} />
           </Routes>

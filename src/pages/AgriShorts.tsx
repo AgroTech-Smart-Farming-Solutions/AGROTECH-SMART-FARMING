@@ -1,21 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Share2, MessageCircle, ChevronUp, ChevronDown, Play, Volume2, VolumeX, Loader2, X, Send, User, Bookmark } from 'lucide-react';
+import { Heart, Share2, MessageCircle, ChevronUp, ChevronDown, Play, Volume2, VolumeX, Loader2, X, Send, User, Bookmark, UserPlus, Check } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 interface Reel {
   id: string;
   title: string;
   description: string;
   author: string;
+  authorId: string; // NEW: Added to track who to follow
   likes: number;
   comments: number;
   shares: number;
-  saved: number; // FIXED: Added to stop currentReel.saved errors!
+  saved: number; 
   thumbnail: string;
   category: string;
   mediaType: string;
@@ -24,14 +25,18 @@ interface Reel {
 const AgriShorts: React.FC = () => {
   const { user } = useAuth();
   const { id: sharedReelId } = useParams();
+  const navigate = useNavigate(); // Added for Profile Redirection
+  
   const [currentIndex, setCurrentIndex] = useState(0);
   const [liked, setLiked] = useState<Set<string>>(new Set());
   const [savedPosts, setSavedPosts] = useState<Set<string>>(new Set());
+  const [following, setFollowing] = useState<Set<string>>(new Set()); // NEW: Track followed authors
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [reelsData, setReelsData] = useState<Reel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [lastTap, setLastTap] = useState(0); // Added for Double-Tap logic
 
   // States for Comments
   const [showComments, setShowComments] = useState(false);
@@ -45,7 +50,6 @@ const AgriShorts: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // FIXED: (supabase as any) stops TS from complaining about database joins
         let { data, error } = await (supabase as any)
           .from('posts')
           .select(`*, profiles(name, username)`)
@@ -73,6 +77,7 @@ const AgriShorts: React.FC = () => {
               title: post.caption ? post.caption.split('\n')[0] : 'Agri Shorts',
               description: post.caption || '',
               author: profileData?.username || profileData?.name || 'AgroTech Farmer',
+              authorId: post.user_id, // NEW: Map Author ID
               likes: post.likes || 0,
               comments: post.comments_count || 0,
               shares: post.shares_count || 0,
@@ -105,6 +110,16 @@ const AgriShorts: React.FC = () => {
             if (savedData) {
               setSavedPosts(new Set(savedData.map((s: any) => s.post_id)));
             }
+
+            // NEW: Fetch Following Data
+            const { data: followingData } = await (supabase as any)
+              .from('follows')
+              .select('following_id')
+              .eq('follower_id', user.id);
+            
+            if (followingData) {
+              setFollowing(new Set(followingData.map((f: any) => f.following_id)));
+            }
           }
         } else {
           setReelsData([{
@@ -112,6 +127,7 @@ const AgriShorts: React.FC = () => {
             title: 'Welcome to AgriShorts',
             description: 'No posts yet. Share your farming stories here!',
             author: 'AgroTech System',
+            authorId: 'system',
             likes: 0,
             comments: 0,
             shares: 0,
@@ -141,7 +157,6 @@ const AgriShorts: React.FC = () => {
       
       setIsLoadingComments(true);
       try {
-        // FIXED: (supabase as any) stops TS from complaining about detailed joins
         const { data, error } = await (supabase as any)
           .from('comments')
           .select(`*, profiles:user_id (name, username)`)
@@ -174,17 +189,55 @@ const AgriShorts: React.FC = () => {
     }
   }, [sharedReelId, reelsData]);
 
+  // NEW: INFINITE LOOP logic added here
   const goToNext = () => {
+    if (reelsData.length <= 1) return;
     if (currentIndex < reelsData.length - 1) {
       setCurrentIndex(currentIndex + 1);
-      setShowComments(false);
+    } else {
+      setCurrentIndex(0); // Loop to start
     }
+    setShowComments(false);
   };
 
+  // NEW: INFINITE LOOP logic added here
   const goToPrev = () => {
+    if (reelsData.length <= 1) return;
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
-      setShowComments(false);
+    } else {
+      setCurrentIndex(reelsData.length - 1); // Loop to end
+    }
+    setShowComments(false);
+  };
+
+  // NEW: Follow Toggle Function
+  const toggleFollow = async (authorId: string) => {
+    if (!user) { toast.error('Please login to follow'); return; }
+    if (user.id === authorId) return; // Can't follow yourself
+
+    const isFollowing = following.has(authorId);
+    const newFollowing = new Set(following);
+    
+    if (isFollowing) newFollowing.delete(authorId);
+    else newFollowing.add(authorId);
+    
+    setFollowing(newFollowing); // Optimistic update
+
+    try {
+      if (isFollowing) {
+        await (supabase as any).from('follows').delete().eq('follower_id', user.id).eq('following_id', authorId);
+        toast.success('Unfollowed user');
+      } else {
+        await (supabase as any).from('follows').insert([{ follower_id: user.id, following_id: authorId }]);
+        toast.success('Following user!');
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      if (isFollowing) newFollowing.add(authorId);
+      else newFollowing.delete(authorId);
+      setFollowing(newFollowing);
+      toast.error('Failed to update follow status');
     }
   };
 
@@ -275,7 +328,6 @@ const AgriShorts: React.FC = () => {
       }
 
       if (sharedSuccessfully) {
-        // FIXED: (supabase as any) stops TS from complaining about missing rpc functions
         const { error } = await (supabase as any).rpc('increment_share_count', { p_id: reel.id });
 
         if (error) {
@@ -294,6 +346,7 @@ const AgriShorts: React.FC = () => {
     }
   };
 
+  // 100% SAFE COMMENT SUBMIT: Removed complex joins and missing objects to prevent crashes!
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim() || !user || !currentReel || currentReel.id === 'fallback-1') {
@@ -305,19 +358,28 @@ const AgriShorts: React.FC = () => {
     setCommentText('');
 
     try {
-      // FIXED: (supabase as any) stops TS from complaining here too
       const { data, error } = await (supabase as any)
         .from('comments')
         .insert([{ post_id: currentReel.id, user_id: user.id, content: submittedText }])
-        .select(`*, profiles:user_id (name, username)`)
+        .select()
         .single();
 
       if (error) throw error;
 
       toast.success('Comment posted!');
       
+      // Build UI comment safely using basic user data
+      const fallbackProfileName = user?.user_metadata?.name || 'AgroTech Farmer';
+      const newComment = {
+        ...data,
+        profiles: {
+          name: fallbackProfileName,
+          username: fallbackProfileName
+        }
+      };
+      
       const newCommentCount = currentReel.comments + 1;
-      setCommentsData(prev => [...prev, data]);
+      setCommentsData(prev => [...prev, newComment]);
       setReelsData(prev => prev.map(reel => 
         reel.id === currentReel.id ? { ...reel, comments: newCommentCount } : reel
       ));
@@ -364,7 +426,7 @@ const AgriShorts: React.FC = () => {
                   className="h-full w-full relative"
                 >
                   {/* Thumbnail/Video */}
-                  <div className="absolute inset-0 flex items-center justify-center bg-black">
+                  <div className="absolute inset-0 flex items-center justify-center bg-black cursor-pointer">
                     {currentReel.mediaType === 'video' ? (
                       <video 
                         src={currentReel.thumbnail} 
@@ -386,12 +448,21 @@ const AgriShorts: React.FC = () => {
                         className="absolute inset-0 w-full h-full object-contain sm:object-cover object-center"
                       />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/90 pointer-events-none" />
                   </div>
 
-                  {/* Play/Pause overlay */}
+                  {/* Play/Pause overlay with Double-Tap Logic */}
                   <motion.button
-                    onClick={() => !showComments && setIsPlaying(!isPlaying)}
+                    onClick={(e) => {
+                      if (showComments) return;
+                      const now = Date.now();
+                      if (now - lastTap < 300) {
+                        toggleLike(currentReel.id, currentReel.likes);
+                      } else {
+                        setIsPlaying(!isPlaying);
+                      }
+                      setLastTap(now);
+                    }}
                     className="absolute inset-0 flex items-center justify-center z-10"
                     whileTap={{ scale: 0.95 }}
                     disabled={showComments}
@@ -422,43 +493,81 @@ const AgriShorts: React.FC = () => {
                       <p className="text-xs sm:text-sm text-gray-200 mt-1 line-clamp-2">
                         {currentReel.description}
                       </p>
-                      <p className="text-xs text-primary font-bold mt-2">
-                        @{currentReel.author}
-                      </p>
+                      
+                      {/* USER PROFILE REDIRECTION & FIX FOLLOW BUTTON */}
+                      <div className="flex items-center gap-3 mt-3">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (currentReel.authorId !== 'fallback-1' && currentReel.authorId !== 'system') {
+                              navigate(`/profile/${currentReel.authorId}`);
+                            }
+                          }}
+                          className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                        >
+                          <div className="w-8 h-8 rounded-full bg-primary/20 border border-white/20 flex items-center justify-center shrink-0 shadow-md">
+                            <User size={16} className="text-white" />
+                          </div>
+                          <p className="text-sm text-white font-bold drop-shadow-md">
+                            @{currentReel.author}
+                          </p>
+                        </div>
+
+                        {user && user.id !== currentReel.authorId && currentReel.id !== 'fallback-1' && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation(); // Stops video from pausing
+                              toggleFollow(currentReel.authorId);
+                            }}
+                            className={`flex items-center gap-1 text-[10px] font-bold px-3 py-1.5 rounded-full border shadow-sm transition-all ${
+                              following.has(currentReel.authorId) 
+                                ? 'bg-black/30 backdrop-blur-md border-white/30 text-white hover:bg-black/50' 
+                                : 'bg-primary border-primary text-primary-foreground hover:bg-primary/90'
+                            }`}
+                          >
+                            {following.has(currentReel.authorId) ? (
+                              <><Check size={12} /> Following</>
+                            ) : (
+                              <><UserPlus size={12} /> Follow</>
+                            )}
+                          </button>
+                        )}
+                      </div>
+
                     </motion.div>
                   </div>
 
                   {/* RIGHT SIDEBAR CONTROLS */}
                   <div className={`absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 flex flex-col items-center z-20 pointer-events-none transition-opacity duration-300 ${showComments ? 'opacity-0' : 'opacity-100'}`}>
                     
-                    {/* Navigation Arrows */}
+                    {/* Navigation Arrows (NEW INFINITE LOOP STYLING) */}
                     <div className="flex flex-col gap-1 sm:gap-2 bg-black/40 backdrop-blur-md p-1.5 rounded-full border border-white/10 shadow-lg pointer-events-auto mb-4 sm:mb-6">
-                      <motion.button onClick={goToPrev} disabled={currentIndex === 0} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center disabled:opacity-30 text-white hover:bg-white/20 transition-colors">
+                      <motion.button onClick={goToPrev} disabled={reelsData.length <= 1} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center disabled:opacity-30 text-white hover:bg-white/20 transition-colors">
                         <ChevronUp size={20} className="sm:w-6 sm:h-6 drop-shadow-md" />
                       </motion.button>
                       <div className="w-6 h-px bg-white/20 mx-auto" />
-                      <motion.button onClick={goToNext} disabled={currentIndex === reelsData.length - 1} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center disabled:opacity-30 text-white hover:bg-white/20 transition-colors">
+                      <motion.button onClick={goToNext} disabled={reelsData.length <= 1} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center disabled:opacity-30 text-white hover:bg-white/20 transition-colors">
                         <ChevronDown size={20} className="sm:w-6 sm:h-6 drop-shadow-md" />
                       </motion.button>
                     </div>
 
                     {/* Action Buttons */}
                     <div className="flex flex-col items-center gap-3 sm:gap-4 pointer-events-auto">
-                      <motion.button onClick={() => toggleLike(currentReel.id, currentReel.likes)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
+                      <motion.button onClick={(e) => { e.stopPropagation(); toggleLike(currentReel.id, currentReel.likes); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
                         <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border border-white/10 shadow-lg transition-colors ${liked.has(currentReel.id) ? 'bg-destructive/90 backdrop-blur-md' : 'bg-black/40 backdrop-blur-md hover:bg-black/60'}`}>
                           <Heart size={20} className={`sm:w-5 sm:h-5 ${liked.has(currentReel.id) ? 'text-white fill-current' : 'text-white'}`} />
                         </div>
                         <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-md">{formatNumber(currentReel.likes)}</span>
                       </motion.button>
 
-                      <motion.button onClick={() => setShowComments(true)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
+                      <motion.button onClick={(e) => { e.stopPropagation(); setShowComments(true); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
                         <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 shadow-lg flex items-center justify-center transition-colors">
                           <MessageCircle size={20} className="text-white sm:w-5 sm:h-5" />
                         </div>
                         <span className="text-[10px] sm:text-xs font-bold text-white drop-shadow-md">{formatNumber(currentReel.comments)}</span>
                       </motion.button>
 
-                      <motion.button onClick={() => handleShare(currentReel)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
+                      <motion.button onClick={(e) => { e.stopPropagation(); handleShare(currentReel); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
                         <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 shadow-lg flex items-center justify-center transition-colors">
                           <Share2 size={20} className="text-white sm:w-5 sm:h-5" />
                         </div>
@@ -466,7 +575,7 @@ const AgriShorts: React.FC = () => {
                       </motion.button>
 
                       {/* Save Button */}
-                      <motion.button onClick={() => toggleSave(currentReel.id)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
+                      <motion.button onClick={(e) => { e.stopPropagation(); toggleSave(currentReel.id); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center gap-1">
                         <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center border border-white/10 shadow-lg transition-colors ${savedPosts.has(currentReel.id) ? 'bg-primary/90 backdrop-blur-md' : 'bg-black/40 backdrop-blur-md hover:bg-black/60'}`}>
                           <Bookmark size={20} className={`sm:w-5 sm:h-5 ${savedPosts.has(currentReel.id) ? 'text-white fill-current' : 'text-white'}`} />
                         </div>
@@ -475,7 +584,7 @@ const AgriShorts: React.FC = () => {
                         </span>
                       </motion.button>
 
-                      <motion.button onClick={() => setIsMuted(!isMuted)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center mt-1">
+                      <motion.button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="flex flex-col items-center mt-1">
                         <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/10 shadow-lg flex items-center justify-center transition-colors">
                           {isMuted ? <VolumeX size={20} className="text-white sm:w-5 sm:h-5" /> : <Volume2 size={20} className="text-white sm:w-5 sm:h-5" />}
                         </div>
@@ -523,7 +632,7 @@ const AgriShorts: React.FC = () => {
                         </button>
                       </div>
 
-                      {/* Comments List rendering real data */}
+                      {/* Comments List */}
                       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
                         {isLoadingComments ? (
                           <div className="flex-1 flex items-center justify-center text-muted-foreground">
