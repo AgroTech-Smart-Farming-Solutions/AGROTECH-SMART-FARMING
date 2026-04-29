@@ -16,6 +16,8 @@
 
 > **AgroTech** is a comprehensive, AI-driven smart farming application designed to bridge the gap between modern technology and traditional agriculture — helping farmers make smarter decisions, track finances, stay informed, and grow better crops.
 
+### 🚀 [Click here to view the Live Demo on Vercel](https://agro-tech-virid.vercel.app/)
+
 </div>
 
 ---
