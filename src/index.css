@@ -1,0 +1,294 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Fresh Green & Mint Palette */
+    --background: 140 20% 96%;
+    --foreground: 150 25% 12%;
+
+    --card: 140 18% 94%;
+    --card-foreground: 150 25% 12%;
+
+    --popover: 140 18% 94%;
+    --popover-foreground: 150 25% 12%;
+
+    /* Vibrant Green - Primary */
+    --primary: 152 55% 40%;
+    --primary-foreground: 140 20% 98%;
+
+    /* Deep Emerald for accents */
+    --emerald: 165 60% 32%;
+    --emerald-foreground: 140 20% 98%;
+
+    /* Teal Green - Secondary */
+    --secondary: 170 40% 45%;
+    --secondary-foreground: 140 20% 98%;
+
+    /* Muted tones */
+    --muted: 145 15% 88%;
+    --muted-foreground: 150 15% 42%;
+
+    /* Accent - Lime/Spring Green */
+    --accent: 85 65% 60%;
+    --accent-foreground: 150 30% 12%;
+
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 140 20% 98%;
+
+    --border: 145 18% 85%;
+    --input: 145 18% 85%;
+    --ring: 152 55% 40%;
+
+    --radius: 1.5rem;
+
+    /* Claymorphism Shadows */
+    --clay-shadow-light: rgba(255, 255, 255, 0.8);
+    --clay-shadow-dark: rgba(0, 0, 0, 0.10);
+    --clay-inset-light: rgba(255, 255, 255, 0.9);
+    --clay-inset-dark: rgba(0, 0, 0, 0.06);
+
+    /* Weather gradients */
+    --weather-sunny: linear-gradient(135deg, hsl(85 70% 70%) 0%, hsl(50 80% 65%) 100%);
+    --weather-cloudy: linear-gradient(135deg, hsl(180 15% 75%) 0%, hsl(170 12% 65%) 100%);
+    --weather-rainy: linear-gradient(135deg, hsl(200 35% 55%) 0%, hsl(190 30% 45%) 100%);
+
+    /* Sidebar */
+    --sidebar-background: 145 20% 92%;
+    --sidebar-foreground: 150 25% 20%;
+    --sidebar-primary: 152 55% 40%;
+    --sidebar-primary-foreground: 140 20% 98%;
+    --sidebar-accent: 145 15% 88%;
+    --sidebar-accent-foreground: 150 25% 12%;
+    --sidebar-border: 145 18% 85%;
+    --sidebar-ring: 152 55% 40%;
+  }
+
+  .dark {
+    --background: 160 20% 8%;
+    --foreground: 145 15% 90%;
+
+    --card: 158 18% 12%;
+    --card-foreground: 145 15% 90%;
+
+    --popover: 158 18% 12%;
+    --popover-foreground: 145 15% 90%;
+
+    --primary: 152 55% 48%;
+    --primary-foreground: 160 20% 5%;
+
+    --emerald: 165 50% 42%;
+    --emerald-foreground: 160 20% 5%;
+
+    --secondary: 170 35% 30%;
+    --secondary-foreground: 145 15% 92%;
+
+    --muted: 158 15% 18%;
+    --muted-foreground: 145 12% 55%;
+
+    --accent: 85 55% 50%;
+    --accent-foreground: 160 25% 8%;
+
+    --destructive: 0 60% 45%;
+    --destructive-foreground: 145 15% 95%;
+
+    --border: 158 15% 20%;
+    --input: 158 15% 20%;
+    --ring: 152 55% 48%;
+
+    --clay-shadow-light: rgba(255, 255, 255, 0.04);
+    --clay-shadow-dark: rgba(0, 0, 0, 0.5);
+    --clay-inset-light: rgba(255, 255, 255, 0.06);
+    --clay-inset-dark: rgba(0, 0, 0, 0.35);
+
+    --sidebar-background: 158 18% 10%;
+    --sidebar-foreground: 145 15% 82%;
+    --sidebar-primary: 152 55% 48%;
+    --sidebar-primary-foreground: 160 20% 5%;
+    --sidebar-accent: 158 15% 18%;
+    --sidebar-accent-foreground: 145 15% 90%;
+    --sidebar-border: 158 15% 20%;
+    --sidebar-ring: 152 55% 48%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Nunito', sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  /* Claymorphism Card Styles */
+  .clay-card {
+    @apply rounded-3xl bg-card;
+    box-shadow: 
+      12px 12px 24px var(--clay-shadow-dark),
+      -12px -12px 24px var(--clay-shadow-light);
+  }
+
+  .clay-card-hover {
+    @apply clay-card transition-all duration-300 ease-out;
+  }
+
+  .clay-card-hover:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 
+      16px 16px 32px var(--clay-shadow-dark),
+      -16px -16px 32px var(--clay-shadow-light);
+  }
+
+  /* Pressed/Inset Clay Effect */
+  .clay-inset {
+    @apply rounded-2xl bg-muted;
+    box-shadow: 
+      inset 6px 6px 12px var(--clay-inset-dark),
+      inset -6px -6px 12px var(--clay-inset-light);
+  }
+
+  /* Floating Dock Style */
+  .clay-dock {
+    @apply rounded-[2rem] bg-card/90 backdrop-blur-sm;
+    box-shadow: 
+      8px 8px 20px var(--clay-shadow-dark),
+      -8px -8px 20px var(--clay-shadow-light);
+  }
+
+  /* Clay Button Styles */
+  .clay-button {
+    @apply rounded-2xl font-semibold transition-all duration-200;
+    box-shadow: 
+      6px 6px 12px var(--clay-shadow-dark),
+      -6px -6px 12px var(--clay-shadow-light);
+  }
+
+  .clay-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      8px 8px 16px var(--clay-shadow-dark),
+      -8px -8px 16px var(--clay-shadow-light);
+  }
+
+  .clay-button:active {
+    transform: translateY(1px);
+    box-shadow: 
+      inset 4px 4px 8px var(--clay-inset-dark),
+      inset -4px -4px 8px var(--clay-inset-light);
+  }
+
+  /* Wave animation for charts */
+  .wave-flow {
+    animation: waveFlow 3s ease-in-out infinite;
+  }
+
+  @keyframes waveFlow {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(-5px); }
+  }
+
+  /* Listening waveform animation */
+  .listening-wave {
+    animation: listeningPulse 1s ease-in-out infinite;
+  }
+
+  @keyframes listeningPulse {
+    0%, 100% { transform: scaleY(0.5); }
+    50% { transform: scaleY(1); }
+  }
+
+  /* Scanning animation */
+  .scan-line {
+    animation: scanLine 2s linear infinite;
+  }
+
+  @keyframes scanLine {
+    0% { top: 0; }
+    100% { top: 100%; }
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--emerald)) 100%);
+  }
+
+  /* Glass morphism for overlays */
+  .glass-overlay {
+    @apply bg-background/60 backdrop-blur-md;
+  }
+
+  /* Premium gradient text */
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-emerald;
+  }
+
+  /* Shimmer effect */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--card)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth bounce animation */
+  .bounce-soft {
+    animation: bounceSoft 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  @keyframes bounceSoft {
+    0% { transform: scale(0.9); opacity: 0; }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Custom Styled Scrollbar matching AgroTech Theme */
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 6px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 20px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground));
+  }
+  .scrollbar-custom {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+}
