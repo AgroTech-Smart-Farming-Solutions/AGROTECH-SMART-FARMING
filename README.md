@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="[https://img.shields.io/badge/AgroTech-Smart%20Farming-2d6a4f?style=for-the-badge&logo=leaf&logoColor=white](https://img.shields.io/badge/AgroTech-Smart%20Farming-2d6a4f?style=for-the-badge&logo=leaf&logoColor=white)" alt="AgroTech Banner"/>
+<!-- <img src="[https://img.shields.io/badge/AgroTech-Smart%20Farming-2d6a4f?style=for-the-badge&logo=leaf&logoColor=white](https://img.shields.io/badge/AgroTech-Smart%20Farming-2d6a4f?style=for-the-badge&logo=leaf&logoColor=white)" alt="AgroTech Banner"/> -->
 
 # 🌾 AGROTECH — SMART FARMING
 
