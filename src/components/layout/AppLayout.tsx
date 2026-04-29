@@ -13,10 +13,11 @@ interface AppLayoutProps {
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, showNav = true }) => {
   if (!showNav) {
     return (
-      <div className="min-h-screen bg-background relative overflow-x-hidden">
+      // Strict 100vw to prevent horizontal scroll
+      <div className="min-h-screen bg-background relative w-full max-w-[100vw] overflow-x-hidden box-border">
         <BackgroundEffects />
-        <main className="relative z-10 flex-1 pb-20 lg:pb-8 pt-16 lg:pt-4">
-          <div className="max-w-7xl mx-auto h-full px-2 sm:px-4 lg:px-8 animate-fade-in">
+        <main className="relative z-10 flex-1 pb-20 lg:pb-8 pt-16 lg:pt-4 w-full">
+          <div className="w-full max-w-7xl mx-auto h-full px-3 sm:px-4 lg:px-8 animate-fade-in box-border">
             {children}
           </div>
         </main>
@@ -26,23 +27,24 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, showNav = true }
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background relative overflow-x-hidden">
+      {/* Wrapper restricted to viewport width */}
+      <div className="min-h-screen flex w-full max-w-[100vw] bg-background relative overflow-x-hidden box-border">
         <BackgroundEffects />
         
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:block shrink-0">
           <AppSidebar />
         </div>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col min-h-screen">
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-h-screen w-full max-w-full overflow-x-hidden box-border">
           {/* Mobile Header */}
-          <div className="lg:hidden">
+          <div className="lg:hidden w-full">
             <Header />
           </div>
 
           {/* Desktop top bar with trigger */}
-          <div className="hidden lg:flex items-center h-14 px-4 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-30">
+          <div className="hidden lg:flex items-center h-14 px-4 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-30 w-full">
             <SidebarTrigger className="mr-3" />
             <span className="text-sm text-muted-foreground">AgroTech</span>
           </div>
@@ -51,15 +53,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, showNav = true }
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="relative z-10 flex-1 pb-28 lg:pb-8 pt-20 lg:pt-4"
+            className="relative z-10 flex-1 pb-28 lg:pb-8 pt-6 sm:pt-8 lg:pt-4 w-full overflow-x-hidden"
           >
-            <div className="container max-w-4xl mx-auto px-3 sm:px-4">
+            {/* Removed 'container' class to fix mobile margin/padding overflow */}
+            <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 md:px-6 box-border">
               {children}
             </div>
           </motion.main>
 
           {/* Mobile Nav */}
-          <div className="lg:hidden">
+          <div className="lg:hidden w-full">
             <MobileNav />
           </div>
         </div>
@@ -69,7 +72,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, showNav = true }
 };
 
 const BackgroundEffects: React.FC = () => (
-  <div className="fixed inset-0 pointer-events-none overflow-hidden">
+  // Fixed wrapper that firmly clips any glowing blobs
+  <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
     <motion.div
       className="absolute top-0 right-0 w-80 sm:w-96 h-80 sm:h-96 bg-accent/20 rounded-full blur-3xl transform translate-x-1/3 -translate-y-1/3"
       animate={{ scale: [1, 1.1, 1], opacity: [0.2, 0.3, 0.2], x: ['33%', '40%', '33%'] }}

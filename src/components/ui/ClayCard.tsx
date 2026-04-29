@@ -13,7 +13,8 @@ export const ClayCard: React.FC<ClayCardProps> = ({
   children,
   ...props
 }) => {
-  const baseStyles = "rounded-3xl p-5";
+  // Added relative w-full and box-border to prevent padding from expanding the div
+  const baseStyles = "relative w-full box-border rounded-3xl p-4 sm:p-5";
   
   const variants = {
     default: "clay-card",
@@ -59,7 +60,7 @@ export const ClayButton: React.FC<{
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "clay-button font-semibold",
+        "clay-button font-semibold box-border flex items-center justify-center", // Added flex and box-border
         sizeStyles[size],
         variantStyles[variant],
         disabled && "opacity-50 cursor-not-allowed",
@@ -84,7 +85,7 @@ export const ClayIconButton: React.FC<{
     <motion.button
       onClick={onClick}
       className={cn(
-        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shrink-0 box-border", // Added shrink-0 and box-border
         active ? "clay-inset text-primary" : "clay-card text-muted-foreground hover:text-foreground",
         className
       )}
