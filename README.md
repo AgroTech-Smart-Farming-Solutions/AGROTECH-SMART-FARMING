@@ -249,6 +249,22 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 ---
 
+## 🤝 Meet Our Team
+
+This project is proudly built and maintained by our dedicated team. We believe in building technology that creates a real impact.
+
+<div align="center">
+
+| <a href="https://github.com/sahilsingh682"><img src="https://github.com/sahilsingh682.png" width="100px;" alt="Sahil Singh" style="border-radius:50%;"/></a> | <a href="https://github.com/pushpender1043"><img src="https://github.com/pushpender1043.png" width="100px;" alt="Pushpender Mishra" style="border-radius:50%;"/></a> | <a href="https://github.com/Lovepreet-Kaur-Gill"><img src="https://github.com/Lovepreet-Kaur-Gill.png" width="100px;" alt="Preet" style="border-radius:50%;"/></a> |
+| :---: | :---: | :---: |
+| **Sahil Singh** | **Pushpender Mishra** | **Lovepreet Kaur** |
+| AI & Full Stack Developer | Full Stack Developer | AI & Full Stack Developer |
+| [GitHub](https://github.com/sahilsingh682) <br> [LinkedIn](https://www.linkedin.com/in/sahilsingh0521) | [GitHub](https://github.com/pushpender1043) <br> [LinkedIn](https://www.linkedin.com/in/pushpender-mishra) | [GitHub](https://github.com/Lovepreet-Kaur-Gill) <br> [LinkedIn](https://www.linkedin.com/in/lovepreet05) |
+
+</div>
+
+---
+
 ## 📬 Contact
 
 **Project:** AgroTech Smart Farming  
