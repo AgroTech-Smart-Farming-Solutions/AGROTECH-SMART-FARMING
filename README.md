@@ -268,7 +268,7 @@ This project is proudly built and maintained by our dedicated team. We believe i
 ## 📬 Contact
 
 **Project:** AgroTech Smart Farming  
-**Developer:** Lovepreet Kaur  
+**Contact:** Lovepreet Kaur  
 **Email:** preetkaurgill437@gmail.com  
 **GitHub:** [@Lovepreet-Kaur-Gill](https://github.com/Lovepreet-Kaur-Gill)
 
