@@ -95,7 +95,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             <motion.button whileHover={{ x: 3 }} className="flex items-center gap-1 text-xs font-semibold text-primary">
-              {t('viewAll')} <ArrowRight size={12} />
+              {t('viewAll')}  <ArrowRight size={12} />
             </motion.button>
           </ClayCard>
         </motion.div>

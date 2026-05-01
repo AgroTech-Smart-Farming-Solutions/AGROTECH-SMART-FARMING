@@ -4,6 +4,7 @@ import { MobileNav } from './MobileNav';
 import { Header } from './Header';
 import { AppSidebar } from './AppSidebar';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -43,10 +44,15 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, showNav = true }
             <Header />
           </div>
 
-          {/* Desktop top bar with trigger */}
-          <div className="hidden lg:flex items-center h-14 px-4 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-30 w-full">
-            <SidebarTrigger className="mr-3" />
-            <span className="text-sm text-muted-foreground">AgroTech</span>
+          {/* 🚀 UPDATED: Desktop top bar with trigger and Notification Bell */}
+          <div className="hidden lg:flex items-center justify-between h-14 px-4 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-30 w-full">
+            <div className="flex items-center">
+              <SidebarTrigger className="mr-3" />
+              <span className="text-sm font-semibold text-foreground">AgroTech</span>
+            </div>
+            
+            {/* Here is the Bell Icon floating to the right */}
+            <NotificationBell />
           </div>
 
           <motion.main
