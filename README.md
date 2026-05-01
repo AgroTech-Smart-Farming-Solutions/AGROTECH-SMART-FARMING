@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-agrotech
-=======
 <div align="center">
 
 <!-- <img src="[https://img.shields.io/badge/AgroTech-Smart%20Farming-2d6a4f?style=for-the-badge&logo=leaf&logoColor=white](https://img.shields.io/badge/AgroTech-Smart%20Farming-2d6a4f?style=for-the-badge&logo=leaf&logoColor=white)" alt="AgroTech Banner"/> -->
@@ -286,4 +283,3 @@ This project is proudly built and maintained by our dedicated team. We believe i
 ![Visitor Count](https://visitor-badge.laobi.icu/badge?page_id=Lovepreet-Kaur-Gill.AGROTECH-SMART-FARMING)
 
 </div>
->>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
