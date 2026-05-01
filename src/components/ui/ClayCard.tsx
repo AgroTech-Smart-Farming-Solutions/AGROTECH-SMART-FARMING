@@ -48,7 +48,7 @@ export const ClayButton: React.FC<{
     md: 'px-6 py-3 text-base',
     lg: 'px-8 py-4 text-lg',
   };
-
+// clay-primary, clay-secondary, clay-accent, clay-primary-foreground, clay-secondary-foreground, clay-accent-foreground
   const variantStyles = {
     primary: 'bg-primary text-primary-foreground',
     secondary: 'bg-secondary text-secondary-foreground',
