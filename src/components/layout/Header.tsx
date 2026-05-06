@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+<<<<<<< HEAD
+import { Languages, Check, Sparkles } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import logoImg from '@/assets/logo.png';
+import { NotificationBell } from '@/components/ui/NotificationBell';
+=======
 import { Bell, Languages, X, Check, Sparkles } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,11 +15,15 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import logoImg from '@/assets/logo.png';
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
 
 export const Header: React.FC = () => {
   const { t, language, setLanguage } = useLanguage();
   const { profile } = useAuth();
   const navigate = useNavigate();
+<<<<<<< HEAD
+  const [showLanguages, setShowLanguages] = useState(false);
+=======
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -74,6 +86,7 @@ export const Header: React.FC = () => {
 
     return () => { supabase.removeChannel(channel); };
   }, [profile]);
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
 
   const languages = [
     { code: 'en' as const, label: 'English', native: 'EN' },
@@ -90,9 +103,21 @@ export const Header: React.FC = () => {
 
   return (
     <>
+<<<<<<< HEAD
+      <motion.header 
+        initial={{ y: -50, opacity: 0 }} 
+        animate={{ y: 0, opacity: 1 }} 
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-4 pt-3 sm:pt-4"
+      >
+        <div className="clay-dock mx-auto max-w-4xl lg:ml-24 px-3 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between">
+          
+          {/* Logo Section */}
+=======
       <motion.header initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 300, damping: 25 }}
         className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-4 pt-3 sm:pt-4">
         <div className="clay-dock mx-auto max-w-4xl lg:ml-24 px-3 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between">
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
           <motion.div className="flex items-center gap-2 sm:gap-3 cursor-pointer" whileHover={{ scale: 1.02 }} onClick={() => navigate('/')}>
             <motion.div whileHover={{ rotate: 15 }} className="relative w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl overflow-hidden shadow-lg">
               <img src={logoImg} alt="AgroTech" className="w-full h-full object-contain" />
@@ -106,12 +131,26 @@ export const Header: React.FC = () => {
             </div>
           </motion.div>
 
+<<<<<<< HEAD
+          {/* Action Buttons Section */}
           <div className="flex items-center gap-1.5 sm:gap-2">
+            
+            {/* Language Selector */}
+=======
+          <div className="flex items-center gap-1.5 sm:gap-2">
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
             <motion.button onClick={() => setShowLanguages(!showLanguages)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               className="relative clay-card px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl flex items-center gap-1.5 sm:gap-2">
               <Languages size={14} className="text-primary" />
               <span className="text-xs font-semibold hidden xs:inline">{currentLang?.native}</span>
             </motion.button>
+<<<<<<< HEAD
+            
+            {/* 🚀 Smart Notification Bell (Only keeping the relevant one!) */}
+            <NotificationBell />
+
+            {/* Profile Avatar */}
+=======
             <motion.button onClick={() => setShowNotifications(!showNotifications)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               className="relative clay-card w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center">
               <Bell size={16} className="sm:w-[18px] sm:h-[18px]" />
@@ -119,6 +158,7 @@ export const Header: React.FC = () => {
                 {notifications.length}
               </motion.span>
             </motion.button>
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
             <motion.button onClick={() => navigate('/profile')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl overflow-hidden">
               <div className="w-full h-full clay-card bg-gradient-to-br from-secondary to-secondary/70 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
@@ -126,10 +166,18 @@ export const Header: React.FC = () => {
               </div>
               <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card" />
             </motion.button>
+<<<<<<< HEAD
+
+=======
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
           </div>
         </div>
       </motion.header>
 
+<<<<<<< HEAD
+      {/* Languages Dropdown Menu */}
+=======
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
       <AnimatePresence>
         {showLanguages && (
           <>
@@ -147,6 +195,11 @@ export const Header: React.FC = () => {
           </>
         )}
       </AnimatePresence>
+<<<<<<< HEAD
+    </>
+  );
+};
+=======
 
       <AnimatePresence>
         {showNotifications && (
@@ -187,3 +240,4 @@ export const Header: React.FC = () => {
     </>
   );
 };
+>>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
