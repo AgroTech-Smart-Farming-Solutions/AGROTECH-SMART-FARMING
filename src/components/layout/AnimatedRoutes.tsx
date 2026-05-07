@@ -18,11 +18,11 @@ import CropCalendar from '@/pages/CropCalendar';
 import WeatherAlerts from '@/pages/WeatherAlerts';
 import KisanKhata from '@/pages/KisanKhata';
 import GovtSchemes from '@/pages/GovtSchemes';
-<<<<<<< HEAD
+
 import Notifications from '@/pages/Notifications';
 
-=======
->>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
+
+
 
 const pageVariants = {
   initial: { opacity: 0, y: 20, scale: 0.98 },
@@ -119,12 +119,10 @@ export const AnimatedRoutes: React.FC = () => {
             <Route path="/ledger" element={<ProtectedRoute><PageWrapper><KisanKhata /></PageWrapper></ProtectedRoute>} />
             <Route path="/schemes" element={<ProtectedRoute><PageWrapper><GovtSchemes /></PageWrapper></ProtectedRoute>} />
             
-<<<<<<< HEAD
+
             {/* 🚀 FIXED: Notifications Route Wrapped for Animations and Security */}
             <Route path="/notifications" element={<ProtectedRoute><PageWrapper><Notifications /></PageWrapper></ProtectedRoute>} />
-            
-=======
->>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
+
             <Route path="/prices" element={<ProtectedRoute><PageWrapper><PricePlanner /></PageWrapper></ProtectedRoute>} />
            {/* --- AGRI SHORTS ROUTES --- */}
             <Route path="/reels" element={<ProtectedRoute><PageWrapper><AgriShorts /></PageWrapper></ProtectedRoute>} />
