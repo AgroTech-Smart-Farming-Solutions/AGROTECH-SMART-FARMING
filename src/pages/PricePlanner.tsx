@@ -327,7 +327,7 @@ const PricePlanner: React.FC = () => {
                 className="w-full pl-9 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:ring-2 focus:ring-primary/50 outline-none transition-all"
               />
             </div>
-            <ClayButton type="submit" variant="primary" className="py-2.5 px-6 shrink-0 flex justify-center">
+            <ClayButton variant="primary" className="py-2.5 px-6 shrink-0 flex justify-center">
               {t('search') || 'Search'}
             </ClayButton>
           </form>
@@ -427,8 +427,4 @@ const PricePlanner: React.FC = () => {
   );
 };
 
-<<<<<<< HEAD
 export default PricePlanner;
-=======
-export default PricePlanner;
->>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7

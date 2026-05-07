@@ -53,15 +53,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, showNav = true }
               <SidebarTrigger className="mr-3" />
               <span className="text-sm font-semibold text-foreground">AgroTech</span>
             </div>
-            
+
             {/* Here is the Bell Icon floating to the right */}
             <NotificationBell />
-
-          {/* Desktop top bar with trigger */}
-          <div className="hidden lg:flex items-center h-14 px-4 border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-30 w-full">
-            <SidebarTrigger className="mr-3" />
-            <span className="text-sm text-muted-foreground">AgroTech</span>
->>>>>>> d671c93f0e6cedec8dc339784e0acf686b6bb5f7
           </div>
 
           <motion.main
